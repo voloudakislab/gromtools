@@ -1,0 +1,43 @@
+## Use C++17 (matches your // [[Rcpp::plugins(cpp17)]])
+CXX_STD = CXX17
+
+## ---- pgenlibr / plink2 include path (like his PLINK2_INCL) ----
+## This asks R where pgenlibr's inst/include lives.
+PLINK2_INCL = $(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript" -e \
+  'cat(system.file("include", package = "pgenlibr", mustWork = TRUE))')
+
+## ---- Include paths ----
+##  ../inst/include : your RPgenReader.h, pvar_grom.h, etc.
+##  $(PLINK2_INCL)  : pgenlibr's plink2/pgenlib headers + libdeflate/zstd/simde
+PKG_CPPFLAGS = -I../inst/include \
+               -I$(PLINK2_INCL) \
+               -DNO_UNALIGNED -DPGENLIB_NOPRINT \
+               $(SHLIB_OPENMP_CXXFLAGS)
+
+## Extra C++ compiler flags (OpenMP)
+PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS)
+
+## ---- Link to pgenlibr's compiled library ----
+## Treat pgenlibr like a normal shared library:
+## find its .so via system.file("libs").
+PGENLIBR_LIB = $(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript" -e '\
+  inc <- system.file("libs", package = "pgenlibr", mustWork = TRUE); \
+  cat(file.path(inc, paste0("pgenlibr", .Platform$dynlib.ext)))')
+
+## Link-time flags:
+##  - R's BLAS/LAPACK (just in case)
+##  - pgenlibr's shared library (provides all plink2/pgenlib/libdeflate/zstd code)
+##  - OpenMP runtime
+PKG_LIBS = $(BLAS_LIBS) $(LAPACK_LIBS) $(FLIBS) \
+           $(PGENLIBR_LIB) \
+           $(SHLIB_OPENMP_CXXFLAGS)
+
+## ---- Your own C++ objects ONLY ----
+## We are NOT re-compiling plink2/pgenlib/libdeflate/zstd sources here.
+## Those are already inside pgenlibr.so.
+OBJECTS = RcppExports.o SoA_grex_v7_v7.o RPgenReader.o
+
+.PHONY: all
+all: $(SHLIB)
+
+$(SHLIB): $(OBJECTS)
