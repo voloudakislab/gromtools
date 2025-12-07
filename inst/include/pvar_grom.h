@@ -2,14 +2,16 @@
 https://github.com/chrchang/plink-ng/tree/master/2.0/pgenlibr/src
 */
 
-#ifndef __PVAR_H__
-#define __PVAR_H__
-
-#include "include/pvar_ffi_support.h"
-#include <map>
+#ifndef __GROMTOOLS_PVAR_GROM_H_
+#define __GROMTOOLS_PVAR_GROM_H_
 
 // [[Rcpp::depends(Rcpp)]]
 #include <Rcpp.h>
+#include <map>
+
+// low-level pvar FFI helper
+#include "include/pvar_ffi_support.h"
+
 using namespace Rcpp;
 
 struct classcomp {

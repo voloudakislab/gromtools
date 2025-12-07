@@ -56,22 +56,11 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// rcpp_hello_world
-List rcpp_hello_world();
-RcppExport SEXP _gromtools_rcpp_hello_world() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(rcpp_hello_world());
-    return rcpp_result_gen;
-END_RCPP
-}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_gromtools_ping", (DL_FUNC) &_gromtools_ping, 0},
     {"_gromtools_grex_axpy_all_snps_to_dense", (DL_FUNC) &_gromtools_grex_axpy_all_snps_to_dense, 16},
     {"_gromtools_grex_omp_info", (DL_FUNC) &_gromtools_grex_omp_info, 0},
-    {"_gromtools_rcpp_hello_world", (DL_FUNC) &_gromtools_rcpp_hello_world, 0},
     {NULL, NULL, 0}
 };
 

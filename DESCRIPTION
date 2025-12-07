@@ -1,0 +1,20 @@
+Package: gromtools
+Type: Package
+Title: GReX Computation Tools with PGEN Streaming
+Version: 0.1.0
+Authors@R: person("Your", "Name", email = "you@example.com", role = c("aut", "cre"))
+Description: Tools for computing genetic predicted expression (GReX) using 
+    streaming genotype data from PGEN files.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends: 
+    R (>= 4.1.0)
+Imports: 
+    Rcpp
+LinkingTo: 
+    Rcpp,
+    pgenlibr (>= 0.3.7)
+SystemRequirements: 
+    GNU make,
+    C++17
+RoxygenNote: 7.3.0

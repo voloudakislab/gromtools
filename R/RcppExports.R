@@ -13,7 +13,3 @@ grex_omp_info <- function() {
     .Call(`_gromtools_grex_omp_info`)
 }
 
-rcpp_hello_world <- function() {
-    .Call(`_gromtools_rcpp_hello_world`)
-}
-
