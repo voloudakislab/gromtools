@@ -4,6 +4,7 @@ https://github.com/chrchang/plink-ng/tree/master/2.0/pgenlibr/src
 
 
 #include "RPgenReader.h"  // includes Rcpp
+#include <cmath>  // for std::round
 
 
 // [[Rcpp::export]]
@@ -252,7 +253,7 @@ uint32_t RPgenReader::GetMaxAlleleCt() const {
 static const double kGenoRDoublePairs[32] ALIGNV16 = PAIR_TABLE16(0.0, 1.0, 2.0, NA_REAL);
 
 
-void RPgenReader::ReadList(vector<double> &buf, const vector<int> & variant_subset, bool meanimpute) {
+void RPgenReader::ReadList(vector<double> &buf, const vector<int> & variant_subset, bool meanimpute,  bool is_round) {
   if (!_info_ptr) {
     throw logic_error("pgen is closed");
   }
@@ -285,13 +286,59 @@ void RPgenReader::ReadList(vector<double> &buf, const vector<int> & variant_subs
       throw logic_error(errstr_buf);
     }
     if (!meanimpute) {
-      plink2::Dosage16ToDoubles(kGenoRDoublePairs, _pgv.genovec, _pgv.dosage_present, _pgv.dosage_main, _subset_size, dosage_ct, buf_iter);
+      // no imputation, just dosage/hardcall -> double (missing stays NA)
+      plink2::Dosage16ToDoubles(
+        kGenoRDoublePairs,
+        _pgv.genovec,
+        _pgv.dosage_present,
+        _pgv.dosage_main,
+        _subset_size,
+        dosage_ct,
+        buf_iter
+      );
     } else {
+      // we want: mean imputation, and optionally round ONLY imputed entries
+
+      // make sure trailing Nyps are clean
       plink2::ZeroTrailingNyps(_subset_size, _pgv.genovec);
-      if (plink2::Dosage16ToDoublesMeanimpute(_pgv.genovec, _pgv.dosage_present, _pgv.dosage_main, _subset_size, dosage_ct, buf_iter)) {
+
+      // 1) First pass: decode without imputation to see which entries are missing
+      std::vector<double> tmp(_subset_size);
+      plink2::Dosage16ToDoubles(
+        kGenoRDoublePairs,
+        _pgv.genovec,
+        _pgv.dosage_present,
+        _pgv.dosage_main,
+        _subset_size,
+        dosage_ct,
+        tmp.data()
+      );
+
+      std::vector<uint8_t> was_missing(_subset_size);
+      for (uint32_t i = 0; i < _subset_size; ++i) {
+        was_missing[i] = R_IsNA(tmp[i]);  // NA = missing before imputation
+      }
+
+      // 2) Let pgenlib do its usual mean imputation
+      if (plink2::Dosage16ToDoublesMeanimpute(
+            _pgv.genovec,
+            _pgv.dosage_present,
+            _pgv.dosage_main,
+            _subset_size,
+            dosage_ct,
+            buf_iter)) {
         char errstr_buf[256];
         snprintf(errstr_buf, 256, "variant %d has only missing dosages", variant_idx + 1);
         throw logic_error(errstr_buf);
+      }
+
+      // 3) Optional: round ONLY imputed entries if is_round == true
+      if (is_round) {
+        for (uint32_t i = 0; i < _subset_size; ++i) {
+          if (was_missing[i]) {
+            buf_iter[i] = std::round(buf_iter[i]);  // 0, 1, 2 (as double)
+          }
+        }
       }
     }
     buf_iter = &(buf_iter[_subset_size]);

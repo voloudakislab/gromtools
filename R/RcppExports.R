@@ -5,8 +5,8 @@ ping <- function() {
     .Call(`_gromtools_ping`)
 }
 
-grex_axpy_all_snps_to_dense <- function(indptr, indices, data, pgen_file, raw_sample_ct, snp_chunk, sample_subset, meanimpute, h5_path, CHUNK, gene_pos, exportChunk, n_total_genes, create_new, G_in = NULL, showWarnings = FALSE) {
-    .Call(`_gromtools_grex_axpy_all_snps_to_dense`, indptr, indices, data, pgen_file, raw_sample_ct, snp_chunk, sample_subset, meanimpute, h5_path, CHUNK, gene_pos, exportChunk, n_total_genes, create_new, G_in, showWarnings)
+grom_axpy_engine <- function(indptr, indices, data, pgen_file, raw_sample_ct, snp_chunk, sample_subset, meanimpute, grom_file, CHUNK, gene_pos, exportChunk, n_total_genes, create_new, G_in = NULL, showWarnings = FALSE, rounded_mean = FALSE) {
+    .Call(`_gromtools_grom_axpy_engine`, indptr, indices, data, pgen_file, raw_sample_ct, snp_chunk, sample_subset, meanimpute, grom_file, CHUNK, gene_pos, exportChunk, n_total_genes, create_new, G_in, showWarnings, rounded_mean)
 }
 
 grex_omp_info <- function() {

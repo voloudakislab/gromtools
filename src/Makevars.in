@@ -57,7 +57,7 @@ PKG_LIBS = \
   $(SHLIB_OPENMP_CXXFLAGS)
 
 ## ---- Your own C++ objects ----
-OBJECTS = RcppExports.o SoA_grex_v7_v7.o RPgenReader.o
+OBJECTS = RcppExports.o grom_axpy_engine.o RPgenReader.o
 
 .PHONY: all
 all: $(SHLIB)

@@ -5,15 +5,10 @@ https://github.com/chrchang/plink-ng/tree/master/2.0/pgenlibr/src
 #ifndef __RPgenReader_H_
 #define __RPgenReader_H_
 
-#include "include/pgenlib_ffi_support.h"
-#include "include/pgenlib_read.h"
-#include "pvar_grom.h"
-#include "include/pvar_ffi_support.h"
+#include "pgenlib_ffi_support.h"
+#include "pgenlib_read.h"
+#include "pvar_grom.h"  // includes Rcpp
 
-// your own wrapper
-#include "pvar_grom.h"
-
-#include <Rcpp.h>
 using namespace std;
 
 class RPgenReader {
@@ -41,7 +36,7 @@ public:
 
   uint32_t GetMaxAlleleCt() const;
 
-  void ReadList( vector<double> &buf, const vector<int> &variant_subset, bool meanimpute);
+  void ReadList( vector<double> &buf, const vector<int> &variant_subset, bool meanimpute, bool is_round);
 
   void Close();
 

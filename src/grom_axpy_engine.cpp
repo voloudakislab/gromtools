@@ -135,7 +135,8 @@ struct TileableDense {
 TileableDense stream_pgen_snps_cpp(
     RPgenReader& reader,
     const Rcpp::IntegerVector& vsubset, // 1-based variant indices for this chunk
-    bool meanimpute
+    bool meanimpute,
+    bool is_round
 ) {
   // n_inds = subset size after Load()
   std::size_t n_inds  = static_cast<std::size_t>(reader.GetSubsetSize());
@@ -152,7 +153,7 @@ TileableDense stream_pgen_snps_cpp(
   std::vector<double> buf;
   buf.resize(n_inds * n_snps);
 
-  reader.ReadList(buf, vsubset_std, meanimpute);
+  reader.ReadList(buf, vsubset_std, meanimpute, is_round);
 
   // Wrap into TileableDense (copy; can be optimized later if needed)
   TileableDense Gc(n_inds, n_snps);
@@ -236,6 +237,7 @@ static inline void flush_gid_batch(SoA& S,
   }
   gid_toExport.clear();
 }
+
 
 // ----------------------------------------------------
 // Unified per-SNP processing  (PARALLEL OVER ROW-CHUNKS)
@@ -363,6 +365,7 @@ struct PgenSnpSource : public ISnpSource {
   int K_;
   std::size_t snp_chunk_;
   bool meanimpute_;
+  bool rounded_mean_;
 
   std::size_t   chunk_start;
   std::size_t   chunk_end;
@@ -372,6 +375,7 @@ struct PgenSnpSource : public ISnpSource {
                 int raw_sample_ct,
                 const Rcpp::IntegerVector& sample_subset,
                 bool meanimpute,
+                bool rounded_mean,
                 std::size_t snp_chunk,
                 int K)
     : reader(),
@@ -382,6 +386,7 @@ struct PgenSnpSource : public ISnpSource {
       K_(K),
       snp_chunk_(snp_chunk),
       meanimpute_(meanimpute),
+      rounded_mean_(rounded_mean),
       chunk_start(0),
       chunk_end(0),
       Gc()
@@ -425,7 +430,8 @@ struct PgenSnpSource : public ISnpSource {
       Gc = stream_pgen_snps_cpp(
         reader,
         vsubset,
-        meanimpute_
+        meanimpute_,
+        rounded_mean_
       );
 
       if (Gc.n_rows != n_inds_) {
@@ -442,10 +448,10 @@ struct PgenSnpSource : public ISnpSource {
 // ----------------------------------------------------
 // Main exported function (unified dense + pgen logic)
 // Exports to a raw binary [n_inds x n_total_genes] matrix
-// stored at h5_path in column-major order.
+// stored at grom_file in column-major order.
 // ----------------------------------------------------
 // [[Rcpp::export]]
-Rcpp::NumericMatrix grex_axpy_all_snps_to_dense(
+Rcpp::NumericMatrix grom_axpy_engine(
     Rcpp::IntegerVector indptr,    // length K+1
     Rcpp::IntegerVector indices,   // length nnz
     Rcpp::NumericVector data,      // length nnz (weights)
@@ -454,14 +460,15 @@ Rcpp::NumericMatrix grex_axpy_all_snps_to_dense(
     size_t snp_chunk,              // SNP chunk size (used by PGEN source)
     Rcpp::IntegerVector sample_subset, // 1-based samples; integer(0) → all
     bool meanimpute,               // mean-impute missing dosages? (PGEN)
-    const std::string& h5_path,    // path to RAW BINARY file
+    const std::string& grom_file,    // path to RAW BINARY file
     size_t CHUNK,                  // row-chunk size
     Rcpp::IntegerVector gene_pos,  // length nnz: 1,0,2,-1 flags
     size_t exportChunk,            // how many finished genes to batch before export
     size_t n_total_genes,          // NEW: total mg_id columns across ALL chromosomes
     bool create_new,               // NEW: TRUE only in first call
     Rcpp::Nullable<Rcpp::NumericMatrix> G_in = R_NilValue, // optional precomputed G
-    bool showWarnings = false
+    bool showWarnings = false,
+    bool rounded_mean = false           // after mean imputing it rounds to nearest integer when true
 ) {
   const int*    ip  = indptr.begin();
   const int*    idx = indices.begin();
@@ -484,7 +491,7 @@ Rcpp::NumericMatrix grex_axpy_all_snps_to_dense(
   // No SNPs: optionally create empty matrix only on first call
   if (K <= 0) {
     if (create_new) {
-      create_empty_raw_matrix(h5_path, 0, n_cols_dense);
+      create_empty_raw_matrix(grom_file, 0, n_cols_dense);
     }
     return Rcpp::NumericMatrix(0, n_cols_dense);
   }
@@ -507,6 +514,7 @@ Rcpp::NumericMatrix grex_axpy_all_snps_to_dense(
       raw_sample_ct,
       sample_subset,
       meanimpute,
+      rounded_mean,
       snp_chunk,
       K
     );
@@ -517,11 +525,11 @@ Rcpp::NumericMatrix grex_axpy_all_snps_to_dense(
 
   // Create RAW BINARY matrix [n_inds x n_total_genes] only in first call
   if (create_new) {
-    create_empty_raw_matrix(h5_path, n_inds, n_cols_dense);
+    create_empty_raw_matrix(grom_file, n_inds, n_cols_dense);
   }
 
   // Open existing file for in-place writes
-  RawWriter writer(h5_path, n_inds, n_cols_dense);
+  RawWriter writer(grom_file, n_inds, n_cols_dense);
 
   std::vector<size_t> gid_toExport;
   gid_toExport.reserve(exportChunk);
