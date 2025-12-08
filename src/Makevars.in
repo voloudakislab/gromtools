@@ -4,19 +4,15 @@ CXX_STD = CXX17
 ## ---- Paths to plink2 tree (vendored in src/third_party) ----
 PLINK2_ROOT = third_party/plink2
 
-## ---- MKL root (your Minerva one) ----
-MKLROOT = /hpc/packages/minerva-rocky9/oneAPI/2025.0.1.46/toolkits/mkl/2025.0
-
 ## ---- Include paths ----
 INCL = -I../inst/include \
        -I$(PLINK2_ROOT) \
        -I$(PLINK2_ROOT)/include \
        -I$(PLINK2_ROOT)/libdeflate \
        -I$(PLINK2_ROOT)/zstd/lib \
-       -I$(PLINK2_ROOT)/simde \
-       -I$(MKLROOT)/include
+       -I$(PLINK2_ROOT)/simde
 
-PKG_CPPFLAGS = $(INCL) \
+PKG_CPPFLAGS = $(INCL) @MKL_CPPFLAGS@ \
                -DNO_UNALIGNED -DPGENLIB_NOPRINT \
                $(SHLIB_OPENMP_CXXFLAGS)
 
@@ -64,10 +60,10 @@ PLINK2_OBJECTS      = $(PLINK2_SRC_CC:.cc=.o)
 SFMT_OBJECTS        = $(SFMT_SRC_C:.c=.o)
 LIBDEFLATE_OBJECTS  = $(LIBDEFLATE_SRC_C:.c=.o)
 
-## ---- Link against MKL + system zstd + zlib ----
+## ---- Link against (optional) MKL + BLAS/LAPACK + system zstd/zlib ----
 PKG_LIBS = \
   $(BLAS_LIBS) $(LAPACK_LIBS) $(FLIBS) \
-  -L$(MKLROOT)/lib -lmkl_rt -lpthread -lm -ldl \
+  @MKL_LIBS@ \
   -lzstd -lz \
   $(SHLIB_OPENMP_CXXFLAGS)
 
