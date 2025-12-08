@@ -2259,18 +2259,11 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 { $as_echo "$as_me:${as_lineno-$LINENO}: C++ compiler: $CXX" >&5
 $as_echo "$as_me: C++ compiler: $CXX" >&6;}
 
-PLINK2_ROOT="/sc/arion/projects/va-biobank/PROJECTS/libraries/plink-ng/2.0"
+# Use vendored plink2 tree inside the package sources
+PLINK2_ROOT="$srcdir/src/third_party/plink2"
 { $as_echo "$as_me:${as_lineno-$LINENO}: Using PLINK2_ROOT = $PLINK2_ROOT" >&5
 $as_echo "$as_me: Using PLINK2_ROOT = $PLINK2_ROOT" >&6;}
 
-if test ! -d "$PLINK2_ROOT/pic_min"; then
-  as_fn_error $? "
-PLINK2_ROOT='$PLINK2_ROOT' does not contain a pic_min/ directory.
-
-Please make sure this path is correct and that plink2 has been built
-with pic_min objects there.
-" "$LINENO" 5
-fi
 
 
 

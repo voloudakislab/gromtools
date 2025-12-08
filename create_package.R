@@ -12,3 +12,4 @@ for (p in .libPaths()) {
 }
 library(GenomicDataStream)
 install.packages("GenomicDataStream")
+BiocManager::install("GabrielHoffman/GenomicDataStream")
