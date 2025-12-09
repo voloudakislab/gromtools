@@ -1,16 +1,19 @@
 Package: gromtools
 Type: Package
-Title: GReX Computation Tools with PGEN Streaming
+Title: Computation Tools for Genetically Regulated Omics with PGEN Streaming
 Version: 0.1.0
-Authors@R: person("Your", "Name", email = "you@example.com", role = c("aut", "cre"))
-Description: Tools for computing genetic predicted expression (GReX) using 
-    streaming genotype data from PGEN files.
-License: MIT + file LICENSE
+Authors@R: person("Marios", "Anyfantakis", email = "anyfantakis.marios@gmail.com", role = c("aut", "cre"))
+Description: Provides high-throughput imputation of genetically regulated omics 
+    from genotype data using additive linear models that assume only linear SNP effects, 
+    optimized for large-scale applications.
+License: GPL (>=3)
 Encoding: UTF-8
 Depends: 
     R (>= 4.1.0)
 Imports: 
-    Rcpp
+    Rcpp,
+    data.table,
+    jsonlite
 LinkingTo: 
     Rcpp
 SystemRequirements: 

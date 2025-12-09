@@ -1,6 +1,14 @@
-/* Adapted from pgenlibr v0.5.0 by Christopher Chang
-https://github.com/chrchang/plink-ng/tree/master/2.0/pgenlibr/src
-*/
+/*
+ * This file incorporates code from:
+ *  - pgenlibr v0.5.0 by Christopher Chang
+ *    https://github.com/chrchang/plink-ng/tree/master/2.0/pgenlibr/src
+ *  - GenomicDataStream 0.0.63 by Gabriel Hoffman
+ *    https://github.com/GabrielHoffman/GenomicDataStream.git
+ *
+ * Code used and modified under the terms of the original licenses.
+ * Additional modifications copyright (C) 2025 Marios Anyfantakis.
+ */
+
 
 
 #include "RPgenReader.h"  // includes Rcpp

@@ -1,0 +1,8 @@
+This directory is an unmodified snapshot of the PLINK 2.0 source code,
+copied verbatim from:
+
+    https://github.com/chrchang/plink-ng
+
+It is included as a third-party dependency. The code in this directory
+remains under the original GPL-3.0-or-later license and copyright of the
+PLINK 2.0 authors. No changes have been made locally.

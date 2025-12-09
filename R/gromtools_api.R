@@ -463,8 +463,7 @@ impute_grom <- function(
   end <- Sys.time()
 
   # Sanity check of mapping
-  check_chrom_pgen_mapping(chr_to_pgen, CHROMOSOME_TAGS, all_pgen_files,
-                           ANCESTRY_WEIGHTS_DIR, pgen_dir)
+  check_chrom_pgen_mapping(chr_to_pgen, CHROMOSOME_TAGS, all_pgen_files, pgen_dir)
 
   total_time <- end - start
   message("impute_grom() completed. Total time: ", total_time)
@@ -589,12 +588,11 @@ map_chrom_to_pgen <- function(CHROMS, all_pgen_files) {
 check_chrom_pgen_mapping <- function(chr_to_pgen,
                                      CHROMS,
                                      all_pgen_files,
-                                     p_weights_table,
                                      pgen_dir) {
-  # 1) Report chromosome tags + source file (full path)
+  # 1) Report chromosome tags (no dependency on a specific weights filename)
   ch_unique <- unique(CHROMS)
   message(
-    "Chromosome-tags provided from file '", p_weights_table, "':\n",
+    "Chromosome tags detected in weights table:\n",
     paste(ch_unique, collapse = ", ")
   )
 
@@ -635,6 +633,7 @@ check_chrom_pgen_mapping <- function(chr_to_pgen,
     missing_pgen_files = if (length(missing_idx)) all_pgen_files[missing_idx] else character(0)
   ))
 }
+
 
 
 
