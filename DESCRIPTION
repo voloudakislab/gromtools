@@ -12,8 +12,7 @@ Depends:
 Imports: 
     Rcpp
 LinkingTo: 
-    Rcpp,
-    pgenlibr (>= 0.3.7)
+    Rcpp
 SystemRequirements: 
     GNU make,
     C++17
