@@ -647,38 +647,87 @@ check_chrom_pgen_mapping <- function(chr_to_pgen,
 
 # sid: data.table with at least IID, GROM_SID (1-based row index in grom)
 # mg_index: data.table with at least mg_id (0-based col index), gene
-read_grom_annotated <- function(path, n_rows, n_cols,
-                                sid, mg_index) {
+read_grom_annotated <- function(prefix,
+                                model_ID = NULL,
+                                selected_cols = NULL,
+                                gid_sep = "\t",
+                                sid_sep = "\t") {
 
-  if (!all(c("IID", "GROM_SID") %in% names(sid))) {
-    stop("sid must contain columns 'IID' and 'GROM_SID'.")
+  # build paths
+  gid_file  <- paste0(prefix, ".gid")
+  sid_file  <- paste0(prefix, ".sid")
+  grom_path <- paste0(prefix, ".grom")
+
+  # load tables
+  gid <- data.table::fread(gid_file, sep = gid_sep)
+  sid <- data.table::fread(sid_file, sep = sid_sep)
+
+  # normalize SID columns
+  if ("#IID" %in% names(sid) && !"IID" %in% names(sid)) {
+    data.table::setnames(sid, "#IID", "IID")
   }
-  if (!all(c("mg_id", "gene") %in% names(mg_index))) {
-    stop("mg_index must contain columns 'mg_id' and 'gene'.")
+  if (!"IID" %in% names(sid)) {
+    stop("sid file must contain column 'IID' or '#IID'.")
+  }
+  if (!"GROM_SID" %in% names(sid)) {
+    sid[, GROM_SID := .I]  # 1-based row index
   }
 
-  # ensure deterministic order consistent with what read_grom will do
+  # validate gid columns
+  if (!all(c("mg_id", "gene") %in% names(gid))) {
+    stop("gid file must contain columns 'mg_id' and 'gene'.")
+  }
+
+  # subset gid by model_ID if requested
+  mg_use <- data.table::copy(gid)[order(mg_id)]
+  if (!is.null(model_ID)) {
+    if (!"model_ID" %in% names(mg_use)) stop("gid file does not have 'model_ID' column.")
+    mg_use <- mg_use[model_ID == model_ID]
+    if (nrow(mg_use) == 0L) stop(sprintf("No rows matched model_ID='%s'.", model_ID))
+  }
+
+  # deterministic sid order
   sid_use <- data.table::copy(sid)[order(GROM_SID)]
-  mg_use  <- data.table::copy(mg_index)[order(mg_id)]
 
-  samples     <- sid_use[["GROM_SID"]]  # 1-based row indices in grom
-  col_indices <- mg_use[["mg_id"]]      # 0-based column indices in grom
+  # ---- simple column selection (1-based positions or gene names) ----
+  if (!is.null(selected_cols)) {
+    if (is.character(selected_cols)) {
+      mg_use <- mg_use[gene %in% selected_cols]
+    } else if (is.numeric(selected_cols) || is.integer(selected_cols)) {
+      idx <- as.integer(selected_cols)
+      if (any(idx < 1L)) stop("selected_cols is 1-based (min = 1).")
+      if (any(idx > nrow(mg_use))) {
+        stop(sprintf("selected_cols out of range: max=%d but only %d columns available.",
+                     max(idx), nrow(mg_use)))
+      }
+      mg_use <- mg_use[idx]
+    } else {
+      stop("selected_cols must be NULL, a character vector of genes, or an integer/numeric vector of 1-based positions.")
+    }
+    if (nrow(mg_use) == 0L) stop("selected_cols matched 0 columns.")
+  }
+  # ------------------------------------------------------------------
 
-  # core I/O: read full columns, subset rows in RAM (fast pattern)
-  mat <- read_grom(
-    path        = path,
+  # derive dimensions for read_grom
+  n_rows <- nrow(sid_use)
+  n_cols <- max(gid$mg_id) + 1L   # IMPORTANT: mg_id is 0-based
+
+  samples     <- sid_use[["GROM_SID"]]  # 1-based
+  col_indices <- mg_use[["mg_id"]]      # 0-based
+
+  mat <- gromtools::read_grom(
+    path        = grom_path,
     n_rows      = n_rows,
     n_cols      = n_cols,
     col_indices = col_indices,
     samples     = samples
   )
 
-  # annotate columns with gene names, rows with IID
   colnames(mat) <- mg_use[["gene"]]
   rownames(mat) <- sid_use[["IID"]]
-
   mat
 }
+
 
 ## 1) Helper: read selected 0-based columns from a column-major raw double matrix
 read_grom <- function(path, n_rows, n_cols, col_indices,
@@ -737,6 +786,7 @@ read_grom <- function(path, n_rows, n_cols, col_indices,
   rownames(out) <- paste0("row_", row_idx)
   out
 }
+
 
 
 
