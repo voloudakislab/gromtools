@@ -7,4 +7,4 @@ import(jsonlite)
 
 export(impute_grom)
 export(build_csc_triplets)
-export(read_grom_annotated)
+export(read_grom)
