@@ -646,22 +646,16 @@ check_chrom_pgen_mapping <- function(chr_to_pgen,
 
 # sid: data.table with at least IID, GROM_SID (1-based row index in grom)
 # mg_index: data.table with at least mg_id (0-based col index), gene
-read_grom_annotated <- function(prefix,
-                                model_ID = NULL,
-                                selected_cols = NULL,
-                                gid_sep = "\t",
-                                sid_sep = "\t") {
+read_grom <- function(prefix, extract = NULL, keep = NULL) {
 
-  # build paths
   gid_file  <- paste0(prefix, ".gid")
   sid_file  <- paste0(prefix, ".sid")
   grom_path <- paste0(prefix, ".grom")
 
-  # load tables
-  gid <- data.table::fread(gid_file, sep = gid_sep)
-  sid <- data.table::fread(sid_file, sep = sid_sep)
+  gid <- data.table::fread(gid_file, sep = "\t")
+  sid <- data.table::fread(sid_file, sep = "\t")
 
-  # normalize SID columns
+  # ---- normalize SID ----
   if ("#IID" %in% names(sid) && !"IID" %in% names(sid)) {
     data.table::setnames(sid, "#IID", "IID")
   }
@@ -669,70 +663,122 @@ read_grom_annotated <- function(prefix,
     stop("sid file must contain column 'IID' or '#IID'.")
   }
   if (!"GROM_SID" %in% names(sid)) {
-    sid[, GROM_SID := .I]  # 1-based row index
+    sid[, GROM_SID := .I]  # 1-based row index in grom
   }
 
-  # validate gid columns
-  if (!all(c("mg_id", "gene") %in% names(gid))) {
-    stop("gid file must contain columns 'mg_id' and 'gene'.")
+  # ---- normalize GID ----
+  # ensure mg_id exists; if not, derive from row order (0-based)
+  if (!"mg_id" %in% names(gid)) {
+    gid[, mg_id := .I - 1L]
+  }
+  if (!"gene" %in% names(gid)) {
+    stop("gid file must contain column 'gene' (or adjust colnaming logic).")
   }
 
-  # subset gid by model_ID if requested
-  mg_use <- data.table::copy(gid)[order(mg_id)]
-  if (!is.null(model_ID)) {
-    if (!"model_ID" %in% names(mg_use)) stop("gid file does not have 'model_ID' column.")
-    mg_use <- mg_use[model_ID == model_ID]
-    if (nrow(mg_use) == 0L) stop(sprintf("No rows matched model_ID='%s'.", model_ID))
-  }
+  # ---------- helper: resolve extract ----------
+  resolve_extract <- function(gid, extract) {
+    if (is.null(extract)) return(data.table::copy(gid))
 
-  # deterministic sid order
-  sid_use <- data.table::copy(sid)[order(GROM_SID)]
-
-  # ---- simple column selection (1-based positions or gene names) ----
-  if (!is.null(selected_cols)) {
-    if (is.character(selected_cols)) {
-      mg_use <- mg_use[gene %in% selected_cols]
-    } else if (is.numeric(selected_cols) || is.integer(selected_cols)) {
-      idx <- as.integer(selected_cols)
-      if (any(idx < 1L)) stop("selected_cols is 1-based (min = 1).")
-      if (any(idx > nrow(mg_use))) {
-        stop(sprintf("selected_cols out of range: max=%d but only %d columns available.",
-                     max(idx), nrow(mg_use)))
-      }
-      mg_use <- mg_use[idx]
-    } else {
-      stop("selected_cols must be NULL, a character vector of genes, or an integer/numeric vector of 1-based positions.")
+    ex <- extract
+    if (is.function(extract)) {
+      ex <- extract(gid)
+    } else if (is.language(extract)) {
+      # allow: quote(gid[model_ID=="..."]) or expression using `gid`
+      ex <- eval(extract, envir = list(gid = gid), enclos = parent.frame())
     }
-    if (nrow(mg_use) == 0L) stop("selected_cols matched 0 columns.")
-  }
-  # ------------------------------------------------------------------
 
-  # derive dimensions for read_grom
-  n_rows <- nrow(sid_use)
-  n_cols <- max(gid$mg_id) + 1L   # IMPORTANT: mg_id is 0-based
+    ex <- data.table::as.data.table(ex)
+
+    # If mg_id already present, we can use it directly
+    if ("mg_id" %in% names(ex)) {
+      mg_use <- ex
+    } else {
+      # otherwise, inner-join back to gid to recover mg_id
+      if ("gene" %in% names(ex) && "gene" %in% names(gid)) {
+        mg_use <- merge(ex, gid, by = "gene", all.x = TRUE, allow.cartesian = TRUE)
+      } else if ("gene_id" %in% names(ex) && "gene_id" %in% names(gid)) {
+        mg_use <- merge(ex, gid, by = "gene_id", all.x = TRUE, allow.cartesian = TRUE)
+      } else {
+        stop("extract must include 'mg_id' OR a join key like 'gene' (or 'gene_id') to recover mg_id.")
+      }
+    }
+
+    if (!"mg_id" %in% names(mg_use)) stop("Could not recover 'mg_id' from extract.")
+    if (anyNA(mg_use$mg_id)) stop("Some extracted rows did not match gid (NA mg_id after join).")
+
+    # deterministic + safe
+    mg_use <- unique(mg_use, by = "mg_id")
+    data.table::setorder(mg_use, mg_id)
+
+    mg_use
+  }
+
+  # ---------- helper: resolve keep ----------
+  resolve_keep <- function(sid, keep) {
+    if (is.null(keep)) return(data.table::copy(sid))
+
+    kk <- keep
+    if (is.function(keep)) {
+      kk <- keep(sid)
+    } else if (is.language(keep)) {
+      # allow: quote(sid[SEX==1]) etc with `sid` available
+      kk <- eval(keep, envir = list(sid = sid), enclos = parent.frame())
+    }
+
+    if (is.character(kk)) {
+      sid_use <- sid[IID %in% kk]
+    } else if (is.numeric(kk) || is.integer(kk)) {
+      idx <- sort(unique(as.integer(kk)))
+      idx <- idx[idx >= 1L & idx <= nrow(sid)]
+      if (!length(idx)) stop("keep numeric indices produced 0 valid rows.")
+      # treat as GROM_SID / row indices (1-based)
+      sid_use <- sid[GROM_SID %in% idx]
+    } else if (is.logical(kk)) {
+      if (length(kk) != nrow(sid)) stop("keep logical vector must have length nrow(sid).")
+      sid_use <- sid[kk]
+    } else if (is.data.frame(kk) || data.table::is.data.table(kk)) {
+      kk <- data.table::as.data.table(kk)
+      if ("#IID" %in% names(kk) && !"IID" %in% names(kk)) data.table::setnames(kk, "#IID", "IID")
+      if (!"IID" %in% names(kk)) stop("keep data must contain 'IID' (or '#IID').")
+      sid_use <- sid[IID %in% kk$IID]
+    } else {
+      stop("keep must be NULL, character IIDs, numeric row indices, logical vector, data.frame/data.table, a function(sid), or an expression like quote(sid[...]).")
+    }
+
+    if (nrow(sid_use) == 0L) stop("keep matched 0 samples.")
+    data.table::setorder(sid_use, GROM_SID)  # deterministic
+    sid_use
+  }
+
+  mg_use  <- resolve_extract(gid, extract)
+  sid_use <- resolve_keep(sid, keep)
+
+  # total matrix dims in the .grom file
+  n_rows_total <- nrow(sid)
+  n_cols_total <- max(gid$mg_id) + 1L  # mg_id is 0-based
 
   samples     <- sid_use[["GROM_SID"]]  # 1-based
-  col_indices <- mg_use[["mg_id"]]      # 0-based
+  col_indices <- as.integer(mg_use[["mg_id"]])  # 0-based
 
-  mat <- gromtools::read_grom(
+  mat <- grom_streamer(
     path        = grom_path,
-    n_rows      = n_rows,
-    n_cols      = n_cols,
+    n_rows      = n_rows_total,
+    n_cols      = n_cols_total,
     col_indices = col_indices,
     samples     = samples
   )
 
+  # nice dimnames
   colnames(mat) <- mg_use[["gene"]]
   rownames(mat) <- sid_use[["IID"]]
   mat
 }
 
 
-## 1) Helper: read selected 0-based columns from a column-major raw double matrix
-read_grom <- function(path, n_rows, n_cols, col_indices,
-                      samples = NULL, n_head = 10L) {
+## Helper: read selected 0-based columns from a column-major raw double matrix
+grom_streamer <- function(path, n_rows, n_cols, col_indices, samples = NULL) {
   con <- file(path, "rb")
-  on.exit(close(con))
+  on.exit(close(con), add = TRUE)
 
   ## ---- sanitize + sort 0-based column indices ----
   col_indices <- sort(unique(as.integer(col_indices)))
@@ -742,7 +788,7 @@ read_grom <- function(path, n_rows, n_cols, col_indices,
     stop("No valid column indices after sanitization.")
   }
 
-  ## ---- determine which rows to read ----
+  ## ---- determine which rows to return ----
   if (!is.null(samples)) {
     # user-provided 1-based row indices (e.g. psam SID)
     samples <- sort(unique(as.integer(samples)))
@@ -752,9 +798,8 @@ read_grom <- function(path, n_rows, n_cols, col_indices,
     }
     row_idx <- samples
   } else {
-    # fallback: use first n_head rows, like before
-    n_head  <- min(as.integer(n_head), n_rows)
-    row_idx <- seq_len(n_head)
+    # default: ALL rows
+    row_idx <- seq_len(n_rows)
   }
 
   n_rows_out <- length(row_idx)
@@ -762,13 +807,11 @@ read_grom <- function(path, n_rows, n_cols, col_indices,
 
   ## ---- read per column ----
   for (j_out in seq_along(col_indices)) {
-    j0 <- col_indices[j_out]           # 0-based column index
+    j0 <- col_indices[j_out]  # 0-based column index
 
-    # where this column starts in the file (in elements/bytes)
-    elem_offset <- as.double(j0) * n_rows      # j0 * n_rows
-    byte_offset <- elem_offset * 8            # 8 bytes per double
+    # column start offset (bytes)
+    byte_offset <- as.double(j0) * n_rows * 8
 
-    # go to start of this column, read entire column, then subset rows
     seek(con, where = byte_offset, origin = "start")
     col_full <- readBin(
       con,
@@ -785,6 +828,7 @@ read_grom <- function(path, n_rows, n_cols, col_indices,
   rownames(out) <- paste0("row_", row_idx)
   out
 }
+
 
 
 
