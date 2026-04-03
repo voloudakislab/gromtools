@@ -1,5 +1,26 @@
-gromtools/autom4te.cache
-
+*
 !.gitignore
-dependency_headers/
-delme.cpp
+!configure
+!configure.ac
+!DESCRIPTION
+!NAMESPACE
+!README.md
+
+# Local agent notes
+CODEX_SUMMARY.md
+
+# Keep generated Rcpp bindings in Git
+!R/RcppExports.R
+!src/RcppExports.cpp
+
+!inst/
+!inst/**
+
+!man/
+!man/**
+
+!R/
+!R/**
+
+!src/
+!src/**

@@ -830,6 +830,44 @@ grom_streamer <- function(path, n_rows, n_cols, col_indices, samples = NULL) {
 }
 
 
+# ================================ gromtools_impute() ================================ #
+
+gromtools_impute <- function(
+  weights_path,
+  grom_pfx,
+  pgen_dir,
+  snp_chunk     = 1000L,
+  sample_subset = integer(0),
+  CHUNK         = 1000L,
+  exportChunk   = 256L,
+  meanimpute    = TRUE,
+  is_round      = TRUE
+) {
+  variant_weights <- data.table::fread(weights_path)
+
+  out_dir <- dirname(grom_pfx)
+  dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+
+  build_csc_triplets(
+    grom_pfx = grom_pfx,
+    pgen_dir = pgen_dir,
+    variant_weights = variant_weights
+  )
+
+  impute_grom(
+    pgen_dir = pgen_dir,
+    grom_pfx = grom_pfx,
+    variant_weights = variant_weights,
+    snp_chunk = snp_chunk,
+    sample_subset = sample_subset,
+    CHUNK = CHUNK,
+    exportChunk = exportChunk,
+    meanimpute = meanimpute,
+    is_round = is_round
+  )
+}
+
+
 
 
 
