@@ -644,189 +644,100 @@ check_chrom_pgen_mapping <- function(chr_to_pgen,
 # ============================= read_grom_annotated() ============================= #
 
 
-# sid: data.table with at least IID, GROM_SID (1-based row index in grom)
-# mg_index: data.table with at least mg_id (0-based col index), gene
-read_grom <- function(prefix, extract = NULL, keep = NULL) {
-
-  gid_file  <- paste0(prefix, ".gid")
-  sid_file  <- paste0(prefix, ".sid")
-  grom_path <- paste0(prefix, ".grom")
-
-  gid <- data.table::fread(gid_file, sep = "\t")
-  sid <- data.table::fread(sid_file, sep = "\t")
-
-  # ---- normalize SID ----
-  if ("#IID" %in% names(sid) && !"IID" %in% names(sid)) {
-    data.table::setnames(sid, "#IID", "IID")
-  }
-  if (!"IID" %in% names(sid)) {
-    stop("sid file must contain column 'IID' or '#IID'.")
-  }
-  if (!"GROM_SID" %in% names(sid)) {
-    sid[, GROM_SID := .I]  # 1-based row index in grom
-  }
-
-  # ---- normalize GID ----
-  # ensure mg_id exists; if not, derive from row order (0-based)
+read_grom_gid <- function(grom_prefix) {
+  gid <- fread(paste0(grom_prefix, ".gid"))
   if (!"mg_id" %in% names(gid)) {
     gid[, mg_id := .I - 1L]
   }
-  if (!"gene" %in% names(gid)) {
-    stop("gid file must contain column 'gene' (or adjust colnaming logic).")
-  }
-
-  # ---------- helper: resolve extract ----------
-  resolve_extract <- function(gid, extract) {
-    if (is.null(extract)) return(data.table::copy(gid))
-
-    ex <- extract
-    if (is.function(extract)) {
-      ex <- extract(gid)
-    } else if (is.language(extract)) {
-      # allow: quote(gid[model_ID=="..."]) or expression using `gid`
-      ex <- eval(extract, envir = list(gid = gid), enclos = parent.frame())
-    }
-
-    ex <- data.table::as.data.table(ex)
-
-    # If mg_id already present, we can use it directly
-    if ("mg_id" %in% names(ex)) {
-      mg_use <- ex
-    } else {
-      # otherwise, inner-join back to gid to recover mg_id
-      if ("gene" %in% names(ex) && "gene" %in% names(gid)) {
-        mg_use <- merge(ex, gid, by = "gene", all.x = TRUE, allow.cartesian = TRUE)
-      } else if ("gene_id" %in% names(ex) && "gene_id" %in% names(gid)) {
-        mg_use <- merge(ex, gid, by = "gene_id", all.x = TRUE, allow.cartesian = TRUE)
-      } else {
-        stop("extract must include 'mg_id' OR a join key like 'gene' (or 'gene_id') to recover mg_id.")
-      }
-    }
-
-    if (!"mg_id" %in% names(mg_use)) stop("Could not recover 'mg_id' from extract.")
-    if (anyNA(mg_use$mg_id)) stop("Some extracted rows did not match gid (NA mg_id after join).")
-
-    # deterministic + safe
-    mg_use <- unique(mg_use, by = "mg_id")
-    data.table::setorder(mg_use, mg_id)
-
-    mg_use
-  }
-
-  # ---------- helper: resolve keep ----------
-  resolve_keep <- function(sid, keep) {
-    if (is.null(keep)) return(data.table::copy(sid))
-
-    kk <- keep
-    if (is.function(keep)) {
-      kk <- keep(sid)
-    } else if (is.language(keep)) {
-      # allow: quote(sid[SEX==1]) etc with `sid` available
-      kk <- eval(keep, envir = list(sid = sid), enclos = parent.frame())
-    }
-
-    if (is.character(kk)) {
-      sid_use <- sid[IID %in% kk]
-    } else if (is.numeric(kk) || is.integer(kk)) {
-      idx <- sort(unique(as.integer(kk)))
-      idx <- idx[idx >= 1L & idx <= nrow(sid)]
-      if (!length(idx)) stop("keep numeric indices produced 0 valid rows.")
-      # treat as GROM_SID / row indices (1-based)
-      sid_use <- sid[GROM_SID %in% idx]
-    } else if (is.logical(kk)) {
-      if (length(kk) != nrow(sid)) stop("keep logical vector must have length nrow(sid).")
-      sid_use <- sid[kk]
-    } else if (is.data.frame(kk) || data.table::is.data.table(kk)) {
-      kk <- data.table::as.data.table(kk)
-      if ("#IID" %in% names(kk) && !"IID" %in% names(kk)) data.table::setnames(kk, "#IID", "IID")
-      if (!"IID" %in% names(kk)) stop("keep data must contain 'IID' (or '#IID').")
-      sid_use <- sid[IID %in% kk$IID]
-    } else {
-      stop("keep must be NULL, character IIDs, numeric row indices, logical vector, data.frame/data.table, a function(sid), or an expression like quote(sid[...]).")
-    }
-
-    if (nrow(sid_use) == 0L) stop("keep matched 0 samples.")
-    data.table::setorder(sid_use, GROM_SID)  # deterministic
-    sid_use
-  }
-
-  mg_use  <- resolve_extract(gid, extract)
-  sid_use <- resolve_keep(sid, keep)
-
-  # total matrix dims in the .grom file
-  n_rows_total <- nrow(sid)
-  n_cols_total <- max(gid$mg_id) + 1L  # mg_id is 0-based
-
-  samples     <- sid_use[["GROM_SID"]]  # 1-based
-  col_indices <- as.integer(mg_use[["mg_id"]])  # 0-based
-
-  mat <- grom_streamer(
-    path        = grom_path,
-    n_rows      = n_rows_total,
-    n_cols      = n_cols_total,
-    col_indices = col_indices,
-    samples     = samples
-  )
-
-  # nice dimnames
-  colnames(mat) <- mg_use[["gene"]]
-  rownames(mat) <- sid_use[["IID"]]
-  mat
+  gid
 }
 
+read_grom_sid <- function(grom_prefix) {
+  sid <- fread(paste0(grom_prefix, ".sid"))
+  if ("#IID" %in% names(sid) && !"IID" %in% names(sid)) {
+    setnames(sid, "#IID", "IID")
+  }
+  if (!"GROM_SID" %in% names(sid)) {
+    sid[, GROM_SID := .I]
+  }
+  sid
+}
 
-## Helper: read selected 0-based columns from a column-major raw double matrix
 grom_streamer <- function(path, n_rows, n_cols, col_indices, samples = NULL) {
   con <- file(path, "rb")
   on.exit(close(con), add = TRUE)
 
-  ## ---- sanitize + sort 0-based column indices ----
   col_indices <- sort(unique(as.integer(col_indices)))
-  col_indices <- col_indices[col_indices >= 0 & col_indices < n_cols]
-  n_cols_out  <- length(col_indices)
-  if (n_cols_out == 0L) {
-    stop("No valid column indices after sanitization.")
-  }
+  col_indices <- col_indices[col_indices >= 0L & col_indices < n_cols]
 
-  ## ---- determine which rows to return ----
-  if (!is.null(samples)) {
-    # user-provided 1-based row indices (e.g. psam SID)
-    samples <- sort(unique(as.integer(samples)))
-    samples <- samples[samples >= 1L & samples <= n_rows]
-    if (length(samples) == 0L) {
-      stop("No valid sample indices after sanitization.")
-    }
-    row_idx <- samples
-  } else {
-    # default: ALL rows
+  if (is.null(samples)) {
     row_idx <- seq_len(n_rows)
+  } else {
+    row_idx <- sort(unique(as.integer(samples)))
+    row_idx <- row_idx[row_idx >= 1L & row_idx <= n_rows]
   }
 
-  n_rows_out <- length(row_idx)
-  out <- matrix(NA_real_, nrow = n_rows_out, ncol = n_cols_out)
+  out <- matrix(NA_real_, nrow = length(row_idx), ncol = length(col_indices))
+  use_targeted_rows <- !is.null(samples)
 
-  ## ---- read per column ----
   for (j_out in seq_along(col_indices)) {
-    j0 <- col_indices[j_out]  # 0-based column index
+    j0 <- col_indices[[j_out]]
+    column_offset <- j0 * n_rows * 8
 
-    # column start offset (bytes)
-    byte_offset <- as.double(j0) * n_rows * 8
-
-    seek(con, where = byte_offset, origin = "start")
-    col_full <- readBin(
-      con,
-      what   = "numeric",
-      n      = n_rows,
-      size   = 8,
-      endian = "little"
-    )
-
-    out[, j_out] <- col_full[row_idx]
+    if (use_targeted_rows) {
+      values <- numeric(length(row_idx))
+      for (i in seq_along(row_idx)) {
+        value_offset <- column_offset + (row_idx[[i]] - 1L) * 8
+        seek(con, where = value_offset, origin = "start")
+        values[[i]] <- readBin(con, what = "double", n = 1L, size = 8, endian = "little")
+      }
+      out[, j_out] <- values
+    } else {
+      seek(con, where = column_offset, origin = "start")
+      full_col <- readBin(con, what = "double", n = n_rows, size = 8, endian = "little")
+      out[, j_out] <- full_col[row_idx]
+    }
   }
 
-  colnames(out) <- paste0("col_", col_indices)
-  rownames(out) <- paste0("row_", row_idx)
   out
+}
+
+read_grom <- function(prefix, extract = NULL, keep = NULL) {
+  gid <- read_grom_gid(prefix)
+  sid <- read_grom_sid(prefix)
+
+  if (is.null(extract)) {
+    gid_use <- copy(gid)
+  } else {
+    gid_use <- as.data.table(extract)
+    if (!"mg_id" %in% names(gid_use)) {
+      stop("extract must include mg_id in this tutorial version.")
+    }
+    gid_use <- unique(gid_use, by = "mg_id")
+    setorder(gid_use, mg_id)
+  }
+
+  if (is.null(keep)) {
+    sid_use <- copy(sid)
+    sample_rows <- NULL
+  } else {
+    keep_idx <- match(keep, sid$IID)
+    keep_idx <- keep_idx[!is.na(keep_idx)]
+    sid_use <- sid[keep_idx]
+    sample_rows <- sid_use$GROM_SID
+  }
+
+  mat <- grom_streamer(
+    path = paste0(prefix, ".grom"),
+    n_rows = nrow(sid),
+    n_cols = max(gid$mg_id) + 1L,
+    col_indices = gid_use$mg_id,
+    samples = sample_rows
+  )
+
+  rownames(mat) <- sid_use$IID
+  colnames(mat) <- gid_use$gene
+  mat
 }
 
 
