@@ -11,10 +11,18 @@ CODEX_SUMMARY.md
 
 # Keep generated Rcpp bindings in Git
 !R/RcppExports.R
-!src/RcppExports.cpp
+!R/gromtools_api.R
+!R/sqlite_read_model_db.R
 
 !inst/
-!inst/**
+!inst/include/
+!inst/include/**
+
+!inst/extdata/
+!inst/extdata/synth_small_variant_weights_db
+!inst/extdata/synthetic_chromosomes
+!inst/extdata/synth_small_variant_weights_db/**
+!inst/extdata/synthetic_chromosomes/**
 
 !man/
 !man/**
@@ -23,8 +31,18 @@ CODEX_SUMMARY.md
 !R/**
 
 !src/
-!src/**
-inst/doc
+!src/grom_axpy_engine.cpp
+!src/pvar_grom.cpp
+!src/RcppExports.cpp
+!src/RPgenReader.cpp
+!src/sqlite_read_model_db.cpp
+!src/Makevars.in
+
+
+!src/third_party/
+!src/third_party/**
+
 
 !vignettes/
-!vignettes/*
+!vignettes/getting-started.html
+!vignettes/getting-started.Rmd

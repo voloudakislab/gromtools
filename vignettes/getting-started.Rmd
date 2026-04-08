@@ -78,5 +78,3 @@ grom_mat <- gromtools_read(
 print(grom_mat)
 ```
 
-
-```
