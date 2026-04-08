@@ -4,8 +4,8 @@
 
 In practice, the package:
 
-- reads chromosome-split `.pgen` genotype files
 - converts variant weights into an internal sparse binary format
+- reads chromosome-split `.pgen` genotype files
 - computes predicted omics values with additive linear SNP effects
 - writes the result to an on-disk `.grom` matrix with matching sample `.sid` and feature `.gid` index files
 - reads `.grom` matrix with optional subsetting of samples and features
