@@ -110,3 +110,8 @@ CODEX_SUMMARY.md
 !vignettes/
 !vignettes/getting-started.Rmd
 !vignettes/getting-started.md
+
+!tests/
+!tests/*.R
+!tests/testthat/
+!tests/testthat/*.R
