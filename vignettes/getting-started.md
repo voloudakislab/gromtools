@@ -1,8 +1,6 @@
 Getting started with gromtools
 ================
 
-# Minimal Workflow
-
 ## Load the package
 
 ``` r
