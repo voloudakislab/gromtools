@@ -8,7 +8,7 @@ In practice, the package:
 - converts variant weights into an internal sparse binary format
 - computes predicted omics values with additive linear SNP effects
 - writes the result to an on-disk `.grom` matrix with matching sample `.sid` and feature `.gid` index files
-- reads .grom files with optional subsetting of samples and features
+- reads `.grom` matrix with optional subsetting of samples and features
 
 ## Installation
 
