@@ -20,6 +20,7 @@ R CMD INSTALL .
 
 ## Notes
 
+- A minimal workflow walkthrough is available in [`vignettes/getting-started.md`](vignettes/getting-started.md)
 - The package requires R, Rcpp, a working C++17 toolchain, GNU `make` and R package `data.table`.
 - `configure` can optionally detect Intel MKL through `MKLROOT`, but it can also build without MKL.
 - Example input files are available under `inst/extdata/`.
