@@ -20,3 +20,7 @@ SystemRequirements:
     GNU make,
     C++17
 RoxygenNote: 7.3.0
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr

@@ -90,3 +90,7 @@ ClosePvar <- function(pvar) {
     invisible(.Call(`_gromtools_ClosePvar`, pvar))
 }
 
+sqlite_read_model_db_cpp <- function(db_path, extra_cols = NULL) {
+    .Call(`_gromtools_sqlite_read_model_db_cpp`, db_path, extra_cols)
+}
+

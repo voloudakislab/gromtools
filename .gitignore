@@ -24,3 +24,7 @@ CODEX_SUMMARY.md
 
 !src/
 !src/**
+inst/doc
+
+!vignettes/
+!vignettes/*

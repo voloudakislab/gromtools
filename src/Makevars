@@ -3,9 +3,11 @@ CXX_STD = CXX17
 
 ## ---- Paths to plink2 tree (vendored in src/third_party) ----
 PLINK2_ROOT = third_party/plink2
+SQLITE_ROOT = third_party/SQLite_amalg
 
 ## ---- Include paths ----
 INCL = -I../inst/include \
+       -I$(SQLITE_ROOT) \
        -I$(PLINK2_ROOT) \
        -I$(PLINK2_ROOT)/include \
        -I$(PLINK2_ROOT)/libdeflate \
@@ -85,12 +87,17 @@ ZSTD_SRC_C = \
     third_party/plink2/zstd/lib/decompress/zstd_decompress.c \
     third_party/plink2/zstd/lib/decompress/zstd_decompress_block.c
 
+## ---- SQLite amalgamation (C) ----
+SQLITE_SRC_C = \
+    third_party/SQLite_amalg/sqlite3.c
+
 
 ## Convert to object names
 PLINK2_OBJECTS      = $(PLINK2_SRC_CC:.cc=.o)
 SFMT_OBJECTS        = $(SFMT_SRC_C:.c=.o)
 LIBDEFLATE_OBJECTS  = $(LIBDEFLATE_SRC_C:.c=.o)
 ZSTD_OBJECTS        = $(ZSTD_SRC_C:.c=.o)
+SQLITE_OBJECTS      = $(SQLITE_SRC_C:.c=.o)
 
 ## ---- Link against (optional) MKL + BLAS/LAPACK + zlib ----
 PKG_LIBS = \
@@ -104,11 +111,13 @@ OBJECTS = \
   RcppExports.o \
   grom_axpy_engine.o \
   RPgenReader.o \
+  sqlite_read_model_db.o \
   pvar_grom.o \
   $(PLINK2_OBJECTS) \
   $(SFMT_OBJECTS) \
   $(LIBDEFLATE_OBJECTS) \
-  $(ZSTD_OBJECTS)
+  $(ZSTD_OBJECTS) \
+  $(SQLITE_OBJECTS)
 
 .PHONY: all
 all: $(SHLIB)

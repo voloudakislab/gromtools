@@ -42,19 +42,24 @@ build_csc_triplets <- function(
                    sep = "\t")
 
   ## ---------- load + normalize weights ----------
-  pre_binary <- variant_weights[, .(ancestry, model_ID, gene, rsid, weight)]
+  has_ancestry <- "ancestry" %in% names(variant_weights)
+  cols_to_keep <- c("model_ID", "gene", "rsid", "weight")
+  if (has_ancestry) {
+    cols_to_keep <- c("ancestry", cols_to_keep)
+  }
+  pre_binary <- variant_weights[, ..cols_to_keep]
   pre_binary[, model_ID := gsub(
     "230719_MegaAnalysis_|230721_MegaAnalysis_|230802_MegaAnalysis_|_prediXcan_noprior_alpha0.5_window1e6_filtered",
     "",
     model_ID
   )]
 
-  ## ---------- single-ancestry subset (current behavior) ----------
+  ## ---------- optional ancestry metadata ----------
   dtg <- pre_binary
-  if (!"ancestry" %in% names(dtg)) {
-    stop("Weights table must contain an 'ancestry' column.")
+  anc <- NULL
+  if (has_ancestry) {
+    anc <- dtg$ancestry[1L]
   }
-  anc <- dtg$ancestry[1L]
 
   # dedup weights rows we care about
   dtg <- unique(dtg[, .(model_ID, gene, rsid, weight)])
@@ -73,7 +78,7 @@ build_csc_triplets <- function(
   mg_index[, mg_id := seq_len(.N) - 1L]
   R <- nrow(mg_index)
 
-  # Write ancestry-level lookups (once)
+  # Write lookup tables once
   fwrite(model_index, file.path(tools_dir, "model_index.tsv.gz"))
   fwrite(gene_index,  file.path(tools_dir, "gene_index.tsv.gz"))
   fwrite(
@@ -182,10 +187,12 @@ build_csc_triplets <- function(
         indices = "indices.u32.bin",
         data    = "data.f32.bin"
       ),
-      ancestry   = anc,
       chromosome = as.character(chr_tag_clean),
       pvar_path  = pvar_path
     )
+    if (!is.null(anc)) {
+      man$ancestry <- anc
+    }
 
     write_json(
       man,
@@ -370,12 +377,24 @@ impute_grom <- function(
   psam <- data.table::fread(psam_file)
   n_inds <- nrow(psam)
 
+  if (length(sample_subset) > 0L) {
+    sample_subset <- unique(as.integer(sample_subset))
+    sample_subset <- sample_subset[sample_subset >= 1L & sample_subset <= n_inds]
+    if (length(sample_subset) == 0L) {
+      stop("sample_subset produced 0 valid sample indices.")
+    }
+    sample_subset <- sort(sample_subset)
+    psam_out <- psam[sample_subset]
+  } else {
+    psam_out <- psam
+  }
+
   # sid file
   sid_file <- sub("[.]grom$", ".sid", grom_file_name)
   if (!grepl("[.]sid$", sid_file)) {
     sid_file <- paste0(grom_file_name, ".sid")
   }
-  data.table::fwrite(psam, file.path(grom_dir, sid_file), sep = "\t")
+  data.table::fwrite(psam_out, file.path(grom_dir, sid_file), sep = "\t")
 
   # Map chromosomes → pgen
   options(warning.length = 8170L)
@@ -673,7 +692,7 @@ grom_streamer <- function(path, n_rows, n_cols, col_indices, samples = NULL) {
   if (is.null(samples)) {
     row_idx <- seq_len(n_rows)
   } else {
-    row_idx <- sort(unique(as.integer(samples)))
+    row_idx <- unique(as.integer(samples))
     row_idx <- row_idx[row_idx >= 1L & row_idx <= n_rows]
   }
 
@@ -736,15 +755,117 @@ read_grom <- function(prefix, extract = NULL, keep = NULL) {
   )
 
   rownames(mat) <- sid_use$IID
-  colnames(mat) <- gid_use$gene
+  colnames(mat) <- paste(gid_use$model_ID, gid_use$gene, sep = "_")
   mat
+}
+
+gromtools_read <- function(grom_pfx, models = NULL, genes = NULL, samples = NULL) {
+  assert_string_vector <- function(x, arg) {
+    if (is.null(x)) {
+      return(invisible(NULL))
+    }
+    if (data.table::is.data.table(x) || is.data.frame(x) || !is.atomic(x) || !is.null(dim(x))) {
+      stop(arg, " must be a character vector or NULL.")
+    }
+    if (!is.character(x)) {
+      stop(arg, " must be a character vector or NULL.")
+    }
+    invisible(NULL)
+  }
+
+  if (!is.character(grom_pfx) || length(grom_pfx) != 1L || is.na(grom_pfx) || !nzchar(grom_pfx)) {
+    stop("grom_pfx must be a single non-empty character string.")
+  }
+
+  assert_string_vector(models, "models")
+  assert_string_vector(genes, "genes")
+  assert_string_vector(samples, "samples")
+
+  required_files <- paste0(grom_pfx, c(".grom", ".gid", ".sid"))
+  missing_files <- required_files[!file.exists(required_files)]
+  if (length(missing_files)) {
+    stop(
+      "The following grom output files do not exist: ",
+      paste(missing_files, collapse = ", ")
+    )
+  }
+
+  read_grom_gid <- function(grom_prefix) {
+    gid <- fread(paste0(grom_prefix, ".gid"))
+    if (!"mg_id" %in% names(gid)) {
+      gid[, mg_id := .I - 1L]
+    }
+    gid
+  }
+
+  read_grom_sid <- function(grom_prefix) {
+    sid <- fread(paste0(grom_prefix, ".sid"))
+    if ("#IID" %in% names(sid) && !"IID" %in% names(sid)) {
+      setnames(sid, "#IID", "IID")
+    }
+    if (!"GROM_SID" %in% names(sid)) {
+      sid[, GROM_SID := .I]
+    }
+    sid
+  }
+
+  gid <- read_grom_gid(grom_pfx)
+  sid <- read_grom_sid(grom_pfx)
+
+  gid_use <- copy(gid)
+  if (!is.null(models)) {
+    gid_use <- gid_use[model_ID %in% unique(models)]
+  }
+  if (!is.null(genes)) {
+    gid_use <- gid_use[gene %in% unique(genes)]
+  }
+
+  keep_use <- NULL
+  if (!is.null(samples)) {
+    keep_idx <- match(unique(samples), sid$IID)
+    keep_idx <- keep_idx[!is.na(keep_idx)]
+    keep_use <- sid$IID[keep_idx]
+  }
+
+  read_grom(
+    prefix = grom_pfx,
+    extract = gid_use,
+    keep = keep_use
+  )
+}
+
+read_db_dir <- function(db_dir, extra_cols = NULL) {
+  if (!is.character(db_dir) || length(db_dir) != 1L || is.na(db_dir) || !nzchar(db_dir)) {
+    stop("db_dir must be a single non-empty character string.")
+  }
+  if (!dir.exists(db_dir)) {
+    stop("db_dir does not exist: ", db_dir)
+  }
+
+  db_files <- list.files(
+    db_dir,
+    pattern = "[.]db$",
+    full.names = TRUE
+  )
+  db_files <- sort(db_files)
+
+  if (!length(db_files)) {
+    stop("No .db files found in db_dir: ", db_dir)
+  }
+
+  tables <- lapply(
+    db_files,
+    function(db_path) sqlite_read_model_db(db_path, extra_cols = extra_cols)
+  )
+
+  data.table::rbindlist(tables, use.names = TRUE, fill = TRUE)
 }
 
 
 # ================================ gromtools_impute() ================================ #
 
 gromtools_impute <- function(
-  weights_path,
+  weights_table,
   grom_pfx,
   pgen_dir,
   snp_chunk     = 1000L,
@@ -754,7 +875,13 @@ gromtools_impute <- function(
   meanimpute    = TRUE,
   is_round      = TRUE
 ) {
-  variant_weights <- data.table::fread(weights_path)
+  if (!data.table::is.data.table(weights_table)) {
+    if (is.data.frame(weights_table)) {
+      weights_table <- data.table::as.data.table(weights_table)
+    } else {
+      stop("weights_table must be a data.frame or data.table.")
+    }
+  }
 
   out_dir <- dirname(grom_pfx)
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
@@ -762,13 +889,13 @@ gromtools_impute <- function(
   build_csc_triplets(
     grom_pfx = grom_pfx,
     pgen_dir = pgen_dir,
-    variant_weights = variant_weights
+    variant_weights = weights_table
   )
 
   impute_grom(
     pgen_dir = pgen_dir,
     grom_pfx = grom_pfx,
-    variant_weights = variant_weights,
+    variant_weights = weights_table,
     snp_chunk = snp_chunk,
     sample_subset = sample_subset,
     CHUNK = CHUNK,

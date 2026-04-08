@@ -141,6 +141,18 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// sqlite_read_model_db_cpp
+Rcpp::List sqlite_read_model_db_cpp(const std::string& db_path, Rcpp::Nullable<Rcpp::CharacterVector> extra_cols);
+RcppExport SEXP _gromtools_sqlite_read_model_db_cpp(SEXP db_pathSEXP, SEXP extra_colsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string& >::type db_path(db_pathSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::CharacterVector> >::type extra_cols(extra_colsSEXP);
+    rcpp_result_gen = Rcpp::wrap(sqlite_read_model_db_cpp(db_path, extra_cols));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_gromtools_ping", (DL_FUNC) &_gromtools_ping, 0},
@@ -153,6 +165,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gromtools_GetVariantsById", (DL_FUNC) &_gromtools_GetVariantsById, 2},
     {"_gromtools_GetAlleleCode", (DL_FUNC) &_gromtools_GetAlleleCode, 3},
     {"_gromtools_ClosePvar", (DL_FUNC) &_gromtools_ClosePvar, 1},
+    {"_gromtools_sqlite_read_model_db_cpp", (DL_FUNC) &_gromtools_sqlite_read_model_db_cpp, 2},
     {NULL, NULL, 0}
 };
 
