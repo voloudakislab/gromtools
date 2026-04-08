@@ -12,8 +12,6 @@ In practice, the package:
 
 ## Installation
 
-From the package root:
-
 ```bash
 git clone voloudakislab/gromtools
 cd gromtools
