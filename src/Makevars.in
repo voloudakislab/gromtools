@@ -1,0 +1,123 @@
+## Use C++17
+CXX_STD = CXX17
+
+## ---- Paths to plink2 tree (vendored in src/third_party) ----
+PLINK2_ROOT = third_party/plink2
+SQLITE_ROOT = third_party/SQLite_amalg
+
+## ---- Include paths ----
+INCL = -I../inst/include \
+       -I$(SQLITE_ROOT) \
+       -I$(PLINK2_ROOT) \
+       -I$(PLINK2_ROOT)/include \
+       -I$(PLINK2_ROOT)/libdeflate \
+       -I$(PLINK2_ROOT)/zstd/lib \
+       -I$(PLINK2_ROOT)/simde
+
+PKG_CPPFLAGS = $(INCL) @MKL_CPPFLAGS@ \
+               -DNO_UNALIGNED -DPGENLIB_NOPRINT \
+               -DZSTD_DISABLE_ASM \
+               $(SHLIB_OPENMP_CXXFLAGS)
+
+PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS)
+PKG_CFLAGS   = $(SHLIB_OPENMP_CFLAGS)
+
+## ---- plink2 / pgenlib sources (C++) ----
+PLINK2_SRC_CC = \
+    third_party/plink2/include/plink2_base.cc \
+    third_party/plink2/include/plink2_bits.cc \
+    third_party/plink2/include/plink2_bgzf.cc \
+    third_party/plink2/include/plink2_htable.cc \
+    third_party/plink2/include/plink2_memory.cc \
+    third_party/plink2/include/plink2_string.cc \
+    third_party/plink2/include/plink2_text.cc \
+    third_party/plink2/include/plink2_thread.cc \
+    third_party/plink2/include/plink2_zstfile.cc \
+    third_party/plink2/include/plink2_bitmap.cc \
+    third_party/plink2/include/plink2_fmath.cc \
+    third_party/plink2/include/plink2_stats.cc \
+    third_party/plink2/include/pgenlib_ffi_support.cc \
+    third_party/plink2/include/pgenlib_misc.cc \
+    third_party/plink2/include/pgenlib_read.cc \
+    third_party/plink2/include/pgenlib_write.cc \
+    third_party/plink2/include/pvar_ffi_support.cc
+
+## ---- SFMT RNG (C) ----
+SFMT_SRC_C = \
+    third_party/plink2/include/SFMT.c
+
+## ---- libdeflate sources (C) ----
+LIBDEFLATE_SRC_C = \
+    third_party/plink2/libdeflate/lib/adler32.c \
+    third_party/plink2/libdeflate/lib/crc32.c \
+    third_party/plink2/libdeflate/lib/deflate_compress.c \
+    third_party/plink2/libdeflate/lib/deflate_decompress.c \
+    third_party/plink2/libdeflate/lib/gzip_compress.c \
+    third_party/plink2/libdeflate/lib/gzip_decompress.c \
+    third_party/plink2/libdeflate/lib/utils.c \
+    third_party/plink2/libdeflate/lib/arm/arm_cpu_features.c \
+    third_party/plink2/libdeflate/lib/x86/x86_cpu_features.c
+
+## ---- zstd sources (C) ----
+ZSTD_SRC_C = \
+    third_party/plink2/zstd/lib/common/debug.c \
+    third_party/plink2/zstd/lib/common/entropy_common.c \
+    third_party/plink2/zstd/lib/common/error_private.c \
+    third_party/plink2/zstd/lib/common/fse_decompress.c \
+    third_party/plink2/zstd/lib/common/pool.c \
+    third_party/plink2/zstd/lib/common/threading.c \
+    third_party/plink2/zstd/lib/common/xxhash.c \
+    third_party/plink2/zstd/lib/common/zstd_common.c \
+    third_party/plink2/zstd/lib/compress/fse_compress.c \
+    third_party/plink2/zstd/lib/compress/hist.c \
+    third_party/plink2/zstd/lib/compress/huf_compress.c \
+    third_party/plink2/zstd/lib/compress/zstd_compress.c \
+    third_party/plink2/zstd/lib/compress/zstd_compress_literals.c \
+    third_party/plink2/zstd/lib/compress/zstd_compress_sequences.c \
+    third_party/plink2/zstd/lib/compress/zstd_compress_superblock.c \
+    third_party/plink2/zstd/lib/compress/zstd_double_fast.c \
+    third_party/plink2/zstd/lib/compress/zstd_fast.c \
+    third_party/plink2/zstd/lib/compress/zstd_lazy.c \
+    third_party/plink2/zstd/lib/compress/zstd_ldm.c \
+    third_party/plink2/zstd/lib/compress/zstd_opt.c \
+    third_party/plink2/zstd/lib/compress/zstdmt_compress.c \
+    third_party/plink2/zstd/lib/compress/zstd_preSplit.c \
+    third_party/plink2/zstd/lib/decompress/huf_decompress.c \
+    third_party/plink2/zstd/lib/decompress/zstd_ddict.c \
+    third_party/plink2/zstd/lib/decompress/zstd_decompress.c \
+    third_party/plink2/zstd/lib/decompress/zstd_decompress_block.c
+
+## ---- SQLite amalgamation (C) ----
+SQLITE_SRC_C = \
+    third_party/SQLite_amalg/sqlite3.c
+
+
+## Convert to object names
+PLINK2_OBJECTS      = $(PLINK2_SRC_CC:.cc=.o)
+SFMT_OBJECTS        = $(SFMT_SRC_C:.c=.o)
+LIBDEFLATE_OBJECTS  = $(LIBDEFLATE_SRC_C:.c=.o)
+ZSTD_OBJECTS        = $(ZSTD_SRC_C:.c=.o)
+SQLITE_OBJECTS      = $(SQLITE_SRC_C:.c=.o)
+
+## ---- Link against (optional) MKL + BLAS/LAPACK + zlib ----
+PKG_LIBS = \
+  $(BLAS_LIBS) $(LAPACK_LIBS) $(FLIBS) \
+  @MKL_LIBS@ \
+  -lz \
+  $(SHLIB_OPENMP_CXXFLAGS)
+
+## ---- Your own C++ objects ----
+OBJECTS = \
+  RcppExports.o \
+  grom_axpy_engine.o \
+  RPgenReader.o \
+  sqlite_read_model_db.o \
+  pvar_grom.o \
+  $(PLINK2_OBJECTS) \
+  $(SFMT_OBJECTS) \
+  $(LIBDEFLATE_OBJECTS) \
+  $(ZSTD_OBJECTS) \
+  $(SQLITE_OBJECTS)
+
+.PHONY: all
+all: $(SHLIB)

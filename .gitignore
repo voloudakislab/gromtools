@@ -1,49 +1,117 @@
-# History files
-.Rhistory
-.Rapp.history
+*
+!.gitignore
+!configure
+!configure.ac
+!DESCRIPTION
+!NAMESPACE
+!README.md
+!LICENSE
 
-# Session Data files
-.RData
-.RDataTmp
+# Local agent notes
+CODEX_SUMMARY.md
 
-# User-specific files
-.Ruserdata
+# Keep generated Rcpp bindings in Git
+!R/RcppExports.R
+!R/gromtools_api.R
+!R/sqlite_read_model_db.R
 
-# Example code in package build process
-*-Ex.R
+!inst/
+!inst/include/
+!inst/include/**
 
-# Output files from R CMD build
-/*.tar.gz
+!inst/extdata/
+!inst/extdata/synth_small_variant_weights_db
+!inst/extdata/synthetic_chromosomes
+!inst/extdata/synth_small_variant_weights_db/**
+!inst/extdata/synthetic_chromosomes/**
 
-# Output files from R CMD check
-/*.Rcheck/
+!man/
+!man/**
 
-# RStudio files
-.Rproj.user/
+!R/
+!R/**
 
-# produced vignettes
-vignettes/*.html
-vignettes/*.pdf
+!src/
+!src/grom_axpy_engine.cpp
+!src/pvar_grom.cpp
+!src/RcppExports.cpp
+!src/RPgenReader.cpp
+!src/sqlite_read_model_db.cpp
+!src/Makevars.in
 
-# OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
-.httr-oauth
 
-# knitr and R markdown default cache directories
-*_cache/
-/cache/
+!src/third_party/
+!src/third_party/plink2
+!src/third_party/plink2/*
 
-# Temporary files created by R markdown
-*.utf8.md
-*.knit.md
 
-# R Environment Variables
-.Renviron
+!src/third_party/plink2/include
+!src/third_party/plink2/include/*.cc
+!src/third_party/plink2/include/*.h
+!src/third_party/plink2/include/*.c
 
-# pkgdown site
-docs/
 
-# translation temp files
-po/*~
+!src/third_party/plink2/libdeflate
+!src/third_party/plink2/libdeflate/*
+!src/third_party/plink2/libdeflate/lib
+!src/third_party/plink2/libdeflate/lib/*.cc
+!src/third_party/plink2/libdeflate/lib/*.h
+!src/third_party/plink2/libdeflate/lib/*.c
+!src/third_party/plink2/libdeflate/lib/arm/
+!src/third_party/plink2/libdeflate/lib/arm/*.cc
+!src/third_party/plink2/libdeflate/lib/arm/*.h
+!src/third_party/plink2/libdeflate/lib/arm/*.c
+!src/third_party/plink2/libdeflate/lib/arm/neon/
+!src/third_party/plink2/libdeflate/lib/arm/neon/*.cc
+!src/third_party/plink2/libdeflate/lib/arm/neon/*.h
+!src/third_party/plink2/libdeflate/lib/arm/neon/*.c
+!src/third_party/plink2/libdeflate/lib/x86
+!src/third_party/plink2/libdeflate/lib/x86/*.cc
+!src/third_party/plink2/libdeflate/lib/x86/*.h
+!src/third_party/plink2/libdeflate/lib/x86/*.c
 
-# RStudio Connect folder
-rsconnect/
+
+!src/third_party/plink2/simde/
+!src/third_party/plink2/simde/*.cc
+!src/third_party/plink2/simde/*.h
+!src/third_party/plink2/simde/*.c
+!src/third_party/plink2/simde/arm/
+!src/third_party/plink2/simde/arm/*.cc
+!src/third_party/plink2/simde/arm/*.h
+!src/third_party/plink2/simde/arm/*.c
+!src/third_party/plink2/simde/x86
+!src/third_party/plink2/simde/x86/*.cc
+!src/third_party/plink2/simde/x86/*.h
+!src/third_party/plink2/simde/x86/*.c
+
+
+!src/third_party/plink2/zstd/
+!src/third_party/plink2/zstd/*
+!src/third_party/plink2/zstd/CMakeModules/*
+!src/third_party/plink2/zstd/lib/*
+!src/third_party/plink2/zstd/lib/common/*.c
+!src/third_party/plink2/zstd/lib/common/*.h
+!src/third_party/plink2/zstd/lib/common/*.c
+!src/third_party/plink2/zstd/lib/compress/*.c
+!src/third_party/plink2/zstd/lib/compress/*.h
+!src/third_party/plink2/zstd/lib/compress/*.c
+!src/third_party/plink2/zstd/lib/decompress/*.c
+!src/third_party/plink2/zstd/lib/decompress/*.h
+!src/third_party/plink2/zstd/lib/decompress/*.c
+!src/third_party/plink2/zstd/lib/decompress/*.S
+
+
+!src/third_party/SQLite_amalg
+!src/third_party/SQLite_amalg/sqlite3.c
+!src/third_party/SQLite_amalg/sqlite3.h
+!src/third_party/SQLite_amalg/sqlite3ext.h
+
+
+!vignettes/
+!vignettes/getting-started.Rmd
+!vignettes/getting-started.md
+
+!tests/
+!tests/*.R
+!tests/testthat/
+!tests/testthat/*.R

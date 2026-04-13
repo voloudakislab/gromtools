@@ -1,0 +1,78 @@
+---
+title: "Getting started with gromtools"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with gromtools}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Load the package
+
+```{r}
+library(gromtools)
+```
+
+## Declare input paths
+
+Declare PLINK2 chromosomes directory
+
+```{r}
+pgen_dir <- system.file("extdata", "synthetic_chromosomes", package = "gromtools")
+print(list.files(pgen_dir)[1:12])
+```
+
+## Read model weights SQL db files
+
+```{r}
+db_directory <- system.file("extdata", "synth_small_variant_weights_db", package = "gromtools")
+list.files(db_directory)
+
+# Loads db files in weights table format
+model_weights_table <- read_db_dir(db_dir = db_directory)
+head(model_weights_table)
+
+```
+
+## Run imputation
+
+Use `gromtools_impute()` to impute genetically regulated -omics levels such as gene expression.
+
+
+```{r, results = 'hide', message=FALSE}
+
+# Output files get written at `tmp_grom_run/synth_example.grom/gid/sid`
+grom_pfx="tmp_grom_run/synth_example"
+
+gromtools_impute(
+  grom_pfx,
+  weights_table = model_weights_table,
+  pgen_dir = pgen_dir
+)
+```
+
+## Read .grom file
+Use `gromtools_read()` to stream selected model / gene / individual combinations from an existing `.grom` output.
+
+```{r}
+# models, genes, and samples default to NULL; NULL loads all available entries.
+grom_mat <- gromtools_read(
+  grom_pfx = grom_pfx,
+  models = c("AMR_subclass_IN_SST", "AMR_subclass_VLMC"), # defaults to NULL; selects all models
+  genes = c("ENSG00000003987", "ENSG00000053900"),        # defaults to NULL; selects all genes
+  samples = c(                                            # defaults to NULL; selects all samples
+    "sample0001", "sample0014", "sample0034", "sample0039", "sample0043"
+  )
+)
+
+
+print(grom_mat)
+```
+

@@ -1,0 +1,10 @@
+useDynLib(gromtools, .registration=TRUE)
+importFrom(Rcpp, evalCpp)
+exportPattern("^[[:alpha:]]+")
+
+import(data.table)
+import(jsonlite)
+
+export(impute_grom)
+export(build_csc_triplets)
+export(read_grom)
