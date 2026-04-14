@@ -1,6 +1,3 @@
-
-# gromtools
-=======
 # gromtools
 
 `gromtools` is an R package for imputing genetically regulated omics values from PLINK2 genotype data.
