@@ -6,6 +6,7 @@
 !NAMESPACE
 !README.md
 !LICENSE
+!_pkgdown.yml
 
 # Local agent notes
 CODEX_SUMMARY.md
@@ -27,6 +28,10 @@ CODEX_SUMMARY.md
 
 !man/
 !man/**
+
+!docs/
+!docs/**
+docs/CODEX_SUMMARY.html
 
 !R/
 !R/**
