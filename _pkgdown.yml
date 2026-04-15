@@ -1,4 +1,5 @@
 url: https://voloudakislab.github.io/gromtools/
+llm-docs: false
 
 template:
   bootstrap: 5
@@ -10,3 +11,10 @@ navbar:
       href: index.html
     - text: Getting started
       href: articles/getting-started.html
+
+reference:
+  - title: User Functions
+    contents:
+      - read_db_dir
+      - gromtools_impute
+      - gromtools_read

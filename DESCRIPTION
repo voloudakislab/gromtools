@@ -6,6 +6,7 @@ Authors@R: person("Marios", "Anyfantakis", email = "anyfantakis.marios@gmail.com
 Description: Provides high-throughput imputation of genetically regulated omics 
     from genotype data using additive linear models that assume only linear SNP effects, 
     optimized for large-scale applications.
+URL: https://voloudakislab.github.io/gromtools/
 License: GPL (>=3)
 Encoding: UTF-8
 Depends: 

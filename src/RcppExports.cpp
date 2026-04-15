@@ -57,90 +57,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// NewPvar
-SEXP NewPvar(String filename, bool omit_chrom, bool omit_pos);
-RcppExport SEXP _gromtools_NewPvar(SEXP filenameSEXP, SEXP omit_chromSEXP, SEXP omit_posSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< String >::type filename(filenameSEXP);
-    Rcpp::traits::input_parameter< bool >::type omit_chrom(omit_chromSEXP);
-    Rcpp::traits::input_parameter< bool >::type omit_pos(omit_posSEXP);
-    rcpp_result_gen = Rcpp::wrap(NewPvar(filename, omit_chrom, omit_pos));
-    return rcpp_result_gen;
-END_RCPP
-}
-// GetVariantChrom
-String GetVariantChrom(List pvar, int variant_num);
-RcppExport SEXP _gromtools_GetVariantChrom(SEXP pvarSEXP, SEXP variant_numSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type pvar(pvarSEXP);
-    Rcpp::traits::input_parameter< int >::type variant_num(variant_numSEXP);
-    rcpp_result_gen = Rcpp::wrap(GetVariantChrom(pvar, variant_num));
-    return rcpp_result_gen;
-END_RCPP
-}
-// GetVariantPos
-int GetVariantPos(List pvar, int variant_num);
-RcppExport SEXP _gromtools_GetVariantPos(SEXP pvarSEXP, SEXP variant_numSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type pvar(pvarSEXP);
-    Rcpp::traits::input_parameter< int >::type variant_num(variant_numSEXP);
-    rcpp_result_gen = Rcpp::wrap(GetVariantPos(pvar, variant_num));
-    return rcpp_result_gen;
-END_RCPP
-}
-// GetVariantId
-String GetVariantId(List pvar, int variant_num);
-RcppExport SEXP _gromtools_GetVariantId(SEXP pvarSEXP, SEXP variant_numSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type pvar(pvarSEXP);
-    Rcpp::traits::input_parameter< int >::type variant_num(variant_numSEXP);
-    rcpp_result_gen = Rcpp::wrap(GetVariantId(pvar, variant_num));
-    return rcpp_result_gen;
-END_RCPP
-}
-// GetVariantsById
-IntegerVector GetVariantsById(List pvar, String id);
-RcppExport SEXP _gromtools_GetVariantsById(SEXP pvarSEXP, SEXP idSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type pvar(pvarSEXP);
-    Rcpp::traits::input_parameter< String >::type id(idSEXP);
-    rcpp_result_gen = Rcpp::wrap(GetVariantsById(pvar, id));
-    return rcpp_result_gen;
-END_RCPP
-}
-// GetAlleleCode
-String GetAlleleCode(List pvar, int variant_num, int allele_num);
-RcppExport SEXP _gromtools_GetAlleleCode(SEXP pvarSEXP, SEXP variant_numSEXP, SEXP allele_numSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type pvar(pvarSEXP);
-    Rcpp::traits::input_parameter< int >::type variant_num(variant_numSEXP);
-    Rcpp::traits::input_parameter< int >::type allele_num(allele_numSEXP);
-    rcpp_result_gen = Rcpp::wrap(GetAlleleCode(pvar, variant_num, allele_num));
-    return rcpp_result_gen;
-END_RCPP
-}
-// ClosePvar
-void ClosePvar(List pvar);
-RcppExport SEXP _gromtools_ClosePvar(SEXP pvarSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type pvar(pvarSEXP);
-    ClosePvar(pvar);
-    return R_NilValue;
-END_RCPP
-}
 // sqlite_read_model_db_cpp
 Rcpp::List sqlite_read_model_db_cpp(const std::string& db_path, Rcpp::Nullable<Rcpp::CharacterVector> extra_cols);
 RcppExport SEXP _gromtools_sqlite_read_model_db_cpp(SEXP db_pathSEXP, SEXP extra_colsSEXP) {
@@ -158,13 +74,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gromtools_ping", (DL_FUNC) &_gromtools_ping, 0},
     {"_gromtools_grom_axpy_engine", (DL_FUNC) &_gromtools_grom_axpy_engine, 17},
     {"_gromtools_grex_omp_info", (DL_FUNC) &_gromtools_grex_omp_info, 0},
-    {"_gromtools_NewPvar", (DL_FUNC) &_gromtools_NewPvar, 3},
-    {"_gromtools_GetVariantChrom", (DL_FUNC) &_gromtools_GetVariantChrom, 2},
-    {"_gromtools_GetVariantPos", (DL_FUNC) &_gromtools_GetVariantPos, 2},
-    {"_gromtools_GetVariantId", (DL_FUNC) &_gromtools_GetVariantId, 2},
-    {"_gromtools_GetVariantsById", (DL_FUNC) &_gromtools_GetVariantsById, 2},
-    {"_gromtools_GetAlleleCode", (DL_FUNC) &_gromtools_GetAlleleCode, 3},
-    {"_gromtools_ClosePvar", (DL_FUNC) &_gromtools_ClosePvar, 1},
     {"_gromtools_sqlite_read_model_db_cpp", (DL_FUNC) &_gromtools_sqlite_read_model_db_cpp, 2},
     {NULL, NULL, 0}
 };
