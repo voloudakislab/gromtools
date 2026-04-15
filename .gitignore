@@ -7,7 +7,6 @@
 !README.md
 !LICENSE
 !_pkgdown.yml
-!Figure_1_nt.png
 
 # Local agent notes
 CODEX_SUMMARY.md
@@ -29,6 +28,8 @@ CODEX_SUMMARY.md
 
 !man/
 !man/**
+!man/figures/
+!man/figures/**
 
 !docs/
 !docs/**

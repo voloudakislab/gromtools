@@ -41,7 +41,7 @@ used about 15x to 49x less peak memory, depending on the comparator and sample
 size. This makes it particularly well suited for large-cohort and biobank-scale
 analyses.
 
-<img src="Figure_1_nt.png" align="center" alt="Benchmark comparison of GROMTools against PLINK2 and PrediXcan" style="padding-left:10px;" />
+<img src="man/figures/Figure_1_nt.png" align="center" alt="Benchmark comparison of GROMTools against PLINK2 and PrediXcan" style="padding-left:10px;" />
 
 ## Install
 
