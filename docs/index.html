@@ -73,6 +73,12 @@
 <p>The package is designed around three user-facing steps: read model databases, run imputation, and read back selected results. Example synthetic inputs for the full workflow are bundled with the package.</p>
 </div>
 <div class="section level2">
+<h2 id="why-gromtools">Why GROMTools?<a class="anchor" aria-label="anchor" href="#why-gromtools"></a>
+</h2>
+<p>GROMTools substantially reduces the computational cost of GREX imputation. In chromosome 1 benchmarks across 50,000 to 450,000 individuals, it consistently outperformed PLINK2 and PrediXcan in both CPU time and peak memory usage. All analyses were conducted single-threaded on the same machine to ensure a fair comparison. Across these benchmarks, GROMTools was about 69x to 209x faster and used about 15x to 49x less peak memory, depending on the comparator and sample size. This makes it particularly well suited for large-cohort and biobank-scale analyses.</p>
+<p><img src="Figure_1_nt.png" align="center" alt="Benchmark comparison of GROMTools against PLINK2 and PrediXcan" style="padding-left:10px;"></p>
+</div>
+<div class="section level2">
 <h2 id="install">Install<a class="anchor" aria-label="anchor" href="#install"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
