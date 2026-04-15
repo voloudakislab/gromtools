@@ -1,6 +1,6 @@
 <br>
 
-### Computation Tools for Genetically Regulated Omics with PGEN Streaming
+### High-throughput genetically regulated omics imputation from chromosome-split PLINK2 genotype data.
 
 The `gromtools` package enables high-throughput imputation of genetically
 regulated omics values from chromosome-split PLINK2 genotype data using
@@ -32,7 +32,8 @@ full workflow are bundled with the package.
 
 ## Why GROMTools?
 
-GROMTools substantially reduces the computational cost of GREX imputation. In
+GROMTools substantially reduces the computational cost of genetically regulated
+gene-expression (GReX) imputation. In
 chromosome 1 benchmarks across 50,000 to 450,000 individuals, it consistently
 outperformed PLINK2 and PrediXcan in both CPU time and peak memory usage. All
 analyses were conducted single-threaded on the same machine to ensure a fair
