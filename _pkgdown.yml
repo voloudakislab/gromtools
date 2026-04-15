@@ -1,1 +1,12 @@
 url: https://voloudakislab.github.io/gromtools/
+
+template:
+  bootstrap: 5
+  bootswatch: flatly
+
+navbar:
+  left:
+    - text: Home
+      href: index.html
+    - text: Getting started
+      href: articles/getting-started.html
