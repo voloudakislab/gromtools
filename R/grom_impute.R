@@ -37,12 +37,12 @@
 #' dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 #' grom_pfx <- file.path(out_dir, "synth_example")
 #'
-#' gromtools_impute(
+#' grom_impute(
 #'   weights_table = model_weights_table,
 #'   grom_pfx = grom_pfx,
 #'   pgen_dir = pgen_dir
 #' )
-gromtools_impute <- function(
+grom_impute <- function(
   weights_table,
   grom_pfx,
   pgen_dir,

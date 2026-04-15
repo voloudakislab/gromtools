@@ -16,5 +16,5 @@ reference:
   - title: User Functions
     contents:
       - read_db_dir
-      - gromtools_impute
-      - gromtools_read
+      - grom_impute
+      - grom_read

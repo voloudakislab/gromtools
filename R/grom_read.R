@@ -32,13 +32,13 @@
 #' dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 #' grom_pfx <- file.path(out_dir, "synth_example")
 #'
-#' gromtools_impute(
+#' grom_impute(
 #'   weights_table = model_weights_table,
 #'   grom_pfx = grom_pfx,
 #'   pgen_dir = pgen_dir
 #' )
 #'
-#' grom_mat <- gromtools_read(
+#' grom_mat <- grom_read(
 #'   grom_pfx = grom_pfx,
 #'   models = c("AMR_subclass_IN_SST", "AMR_subclass_VLMC"),
 #'   genes = c("ENSG00000003987", "ENSG00000053900"),
@@ -48,7 +48,7 @@
 #' )
 #'
 #' print(grom_mat)
-gromtools_read <- function(grom_pfx, models = NULL, genes = NULL, samples = NULL) {
+grom_read <- function(grom_pfx, models = NULL, genes = NULL, samples = NULL) {
   assert_string_vector <- function(x, arg) {
     if (is.null(x)) {
       return(invisible(NULL))

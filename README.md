@@ -9,8 +9,8 @@ additive linear SNP models.
 Major functionality of the `gromtools` package:
 
 + [`read_db_dir()`](reference/read_db_dir.html)                Load model SQLite databases into a weights table
-+ [`gromtools_impute()`](reference/gromtools_impute.html)  Build sparse weights and write `.grom`, `.gid`, and `.sid` outputs
-+ [`gromtools_read()`](reference/gromtools_read.html)        Stream selected model, gene, and sample combinations from an existing `.grom` output
++ [`grom_impute()`](reference/grom_impute.html)  Build sparse weights and write `.grom`, `.gid`, and `.sid` outputs
++ [`grom_read()`](reference/grom_read.html)        Stream selected model, gene, and sample combinations from an existing `.grom` output
 
 ## Resources
 

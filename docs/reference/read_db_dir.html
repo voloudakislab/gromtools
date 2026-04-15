@@ -71,6 +71,7 @@ each database when available.</p></dd>
 <span class="r-in"><span><span class="va">model_weights_table</span> <span class="op">&lt;-</span> <span class="fu">read_db_dir</span><span class="op">(</span>db_dir <span class="op">=</span> <span class="va">db_directory</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">model_weights_table</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>               model_ID            gene        rsid chromosomes position</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                 &lt;char&gt;          &lt;char&gt;      &lt;char&gt;      &lt;char&gt;    &lt;num&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1: AMR_subclass_IN_SST ENSG00000228594  rs28625089        chr1   904947</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: AMR_subclass_IN_SST ENSG00000228594  rs12080505        chr1  1110226</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3: AMR_subclass_IN_SST ENSG00000228594   rs6604971        chr1  1135812</span>
@@ -78,6 +79,7 @@ each database when available.</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 5: AMR_subclass_IN_SST ENSG00000228594   rs4970443        chr1  1381507</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 6: AMR_subclass_IN_SST ENSG00000228594 rs368836064        chr1  1382885</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    ref_allele eff_allele      weight</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        &lt;char&gt;     &lt;char&gt;       &lt;num&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:          G          A -0.07537545</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:          A          C  0.14694625</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:          T          C  0.08669795</span>
