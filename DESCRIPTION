@@ -18,8 +18,9 @@ LinkingTo:
     Rcpp
 SystemRequirements: 
     GNU make,
-    C++17
-RoxygenNote: 7.3.0
+    C++17,
+    zlib (development headers on Linux)
+RoxygenNote: 7.3.3
 Suggests: 
     knitr,
     rmarkdown,

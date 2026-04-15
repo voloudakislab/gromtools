@@ -1,0 +1,84 @@
+#' Impute genetically regulated omics values
+#'
+#' Build sparse weight triplets and generate `.grom`, `.gid`, and `.sid`
+#' outputs from model weights and PLINK2 genotype inputs.
+#'
+#' @param weights_table A `data.frame` or `data.table` of model weights.
+#' @param grom_pfx Output prefix for the generated grom files.
+#' @param pgen_dir Path to a directory containing PLINK2 `.pgen`, `.pvar`, and
+#'   `.psam` files.
+#' @param snp_chunk Integer chunk size used while streaming SNPs.
+#' @param sample_subset Optional integer vector of 1-based sample indices to
+#'   retain.
+#' @param CHUNK Integer chunk size passed to the low-level imputation engine.
+#' @param exportChunk Integer chunk size used when exporting results.
+#' @param meanimpute Logical indicating whether missing dosages should be mean
+#'   imputed.
+#' @param is_round Logical indicating whether mean imputation should use rounded
+#'   means.
+#'
+#' @return Invisibly returns the result of the imputation pipeline after writing
+#'   output files to disk.
+#'
+#' @examples
+#' pgen_dir <- system.file(
+#'   "extdata",
+#'   "synthetic_chromosomes",
+#'   package = "gromtools"
+#' )
+#' db_directory <- system.file(
+#'   "extdata",
+#'   "synth_small_variant_weights_db",
+#'   package = "gromtools"
+#' )
+#' model_weights_table <- read_db_dir(db_dir = db_directory)
+#'
+#' out_dir <- file.path(tempdir(), "tmp_grom_run")
+#' dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+#' grom_pfx <- file.path(out_dir, "synth_example")
+#'
+#' gromtools_impute(
+#'   weights_table = model_weights_table,
+#'   grom_pfx = grom_pfx,
+#'   pgen_dir = pgen_dir
+#' )
+gromtools_impute <- function(
+  weights_table,
+  grom_pfx,
+  pgen_dir,
+  snp_chunk     = 1000L,
+  sample_subset = integer(0),
+  CHUNK         = 1000L,
+  exportChunk   = 256L,
+  meanimpute    = TRUE,
+  is_round      = TRUE
+) {
+  if (!data.table::is.data.table(weights_table)) {
+    if (is.data.frame(weights_table)) {
+      weights_table <- data.table::as.data.table(weights_table)
+    } else {
+      stop("weights_table must be a data.frame or data.table.")
+    }
+  }
+
+  out_dir <- dirname(grom_pfx)
+  dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+
+  build_csc_triplets(
+    grom_pfx = grom_pfx,
+    pgen_dir = pgen_dir,
+    variant_weights = weights_table
+  )
+
+  impute_grom(
+    pgen_dir = pgen_dir,
+    grom_pfx = grom_pfx,
+    variant_weights = weights_table,
+    snp_chunk = snp_chunk,
+    sample_subset = sample_subset,
+    CHUNK = CHUNK,
+    exportChunk = exportChunk,
+    meanimpute = meanimpute,
+    is_round = is_round
+  )
+}
