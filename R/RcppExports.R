@@ -16,3 +16,4 @@ grex_omp_info <- function() {
 sqlite_read_model_db_cpp <- function(db_path, extra_cols = NULL) {
     .Call(`_gromtools_sqlite_read_model_db_cpp`, db_path, extra_cols)
 }
+

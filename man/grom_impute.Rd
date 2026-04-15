@@ -24,14 +24,20 @@ grom_impute(
 \item{pgen_dir}{Path to a directory containing PLINK2 `.pgen`, `.pvar`, and
 `.psam` files.}
 
-\item{snp_chunk}{Integer chunk size used while streaming SNPs.}
+\item{snp_chunk}{Integer chunk size used while streaming SNPs. Specifies how
+many genotype records are loaded at a time and can be used to control peak
+and average memory usage.}
 
-\item{sample_subset}{Optional integer vector of 1-based sample indices to
-retain.}
+\item{sample_subset}{Integer vector specifying which samples to load and use
+for imputation.}
 
-\item{CHUNK}{Integer chunk size passed to the low-level imputation engine.}
+\item{CHUNK}{Integer chunk size passed to the low-level imputation engine.
+Specifies the tile size used during computation and can help maintain
+efficient CPU-cache utilization.}
 
-\item{exportChunk}{Integer chunk size used when exporting results.}
+\item{exportChunk}{Integer chunk size used when exporting results. Specifies
+how many output columns are written at a time and can be used to control
+peak and average memory usage.}
 
 \item{meanimpute}{Logical indicating whether missing dosages should be mean
 imputed.}

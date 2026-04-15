@@ -7,11 +7,17 @@
 #' @param grom_pfx Output prefix for the generated grom files.
 #' @param pgen_dir Path to a directory containing PLINK2 `.pgen`, `.pvar`, and
 #'   `.psam` files.
-#' @param snp_chunk Integer chunk size used while streaming SNPs.
-#' @param sample_subset Optional integer vector of 1-based sample indices to
-#'   retain.
+#' @param snp_chunk Integer chunk size used while streaming SNPs. Specifies how
+#'   many genotype records are loaded at a time and can be used to control peak
+#'   and average memory usage.
+#' @param sample_subset Integer vector specifying which samples to load and use
+#'   for imputation.
 #' @param CHUNK Integer chunk size passed to the low-level imputation engine.
-#' @param exportChunk Integer chunk size used when exporting results.
+#'   Specifies the tile size used during computation and can help maintain
+#'   efficient CPU-cache utilization.
+#' @param exportChunk Integer chunk size used when exporting results. Specifies
+#'   how many output columns are written at a time and can be used to control
+#'   peak and average memory usage.
 #' @param meanimpute Logical indicating whether missing dosages should be mean
 #'   imputed.
 #' @param is_round Logical indicating whether mean imputation should use rounded
