@@ -1,6 +1,6 @@
 Package: gromtools
 Type: Package
-Title: Computation Tools for Genetically Regulated Omics with PGEN Streaming
+Title: GROMTools: scalable individual-level GReX imputation for mega-biobank-scale cohorts
 Version: 0.1.0
 Authors@R: person("Marios", "Anyfantakis", email = "anyfantakis.marios@gmail.com", role = c("aut", "cre"))
 Description: Provides high-throughput imputation of genetically regulated omics 
