@@ -471,6 +471,7 @@ impute_grom <- function(
     )
   }
   message("### impute_grom() completed at: ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
+  message("Results stored under directory ", normalizePath(grom_dir, winslash = "/", mustWork = FALSE))
 
 }
 

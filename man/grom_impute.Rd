@@ -81,7 +81,8 @@ matched.
 To confirm the resolved mapping after a run, inspect the generated files
 `meta/chr_to_pgen_map.tsv` and `meta/chr_to_pvar_map.tsv` under the output
 directory. These record which chromosome tag was matched to which genotype
-file basename.
+file basename. On completion, `grom_impute()` also reports the output
+directory path in the console message stream.
 }
 \examples{
 library(gromtools)
