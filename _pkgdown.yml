@@ -12,6 +12,11 @@ navbar:
     - text: Getting started
       href: articles/getting-started.html
 
+home:
+  links:
+    - text: Browse source code
+      href: https://github.com/voloudakislab/gromtools.git
+
 reference:
   - title: User Functions
     contents:
