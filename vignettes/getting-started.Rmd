@@ -1,6 +1,6 @@
 ---
 title: "Getting started with gromtools"
-subtitle: "High-throughput genetically regulated omics imputation from chromosome-split PLINK2 genotype data"
+subtitle: "Leverages additive linear SNP models for genetically regulated omics imputation"
 author: "Developed by Marios Anyfantakis"
 date: "Run on `r format(Sys.time(), '%Y-%m-%d %H:%M:%S')`"
 documentclass: article
