@@ -21,11 +21,6 @@ navbar:
     - text: Reference
       href: reference/index.html
 
-home:
-  links:
-    - text: Browse source code
-      href: https://github.com/voloudakislab/gromtools.git
-
 reference:
   - title: All functions
     contents:
