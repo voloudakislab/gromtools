@@ -11,6 +11,8 @@ navbar:
       href: index.html
     - text: Getting started
       href: articles/getting-started.html
+    - text: Reference
+      href: reference/index.html
 
 home:
   links:
@@ -18,7 +20,7 @@ home:
       href: https://github.com/voloudakislab/gromtools.git
 
 reference:
-  - title: User Functions
+  - title: All functions
     contents:
       - read_db_dir
       - grom_impute
