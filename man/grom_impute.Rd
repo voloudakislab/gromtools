@@ -54,8 +54,6 @@ Build sparse weight triplets and generate `.grom`, `.gid`, and `.sid`
 outputs from model weights and PLINK2 genotype inputs.
 }
 \details{
-Constraints
-
 Chromosome-to-file mapping uses the `chromosomes` column in
 `weights_table`. The basenames of the `.pgen` and `.pvar` files in
 `pgen_dir` must contain the corresponding chromosome tag. For example:
@@ -86,6 +84,8 @@ directory. These record which chromosome tag was matched to which genotype
 file basename.
 }
 \examples{
+library(gromtools)
+
 pgen_dir <- system.file(
   "extdata",
   "synthetic_chromosomes",

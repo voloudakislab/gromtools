@@ -20,6 +20,8 @@ A `data.table` combining the contents of all `.db` files in
 Load all SQLite model databases in a directory into a single weights table.
 }
 \examples{
+library(gromtools)
+
 db_directory <- system.file(
   "extdata",
   "synth_small_variant_weights_db",

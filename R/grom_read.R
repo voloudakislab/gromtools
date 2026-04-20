@@ -16,6 +16,8 @@
 #'   in columns.
 #'
 #' @examples
+#' library(gromtools)
+#'
 #' pgen_dir <- system.file(
 #'   "extdata",
 #'   "synthetic_chromosomes",

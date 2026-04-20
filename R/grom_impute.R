@@ -27,6 +27,8 @@
 #'   output files to disk.
 #'
 #' @examples
+#' library(gromtools)
+#'
 #' pgen_dir <- system.file(
 #'   "extdata",
 #'   "synthetic_chromosomes",
@@ -50,8 +52,6 @@
 #' )
 #'
 #' @details
-#' Constraints
-#'
 #' Chromosome-to-file mapping uses the `chromosomes` column in
 #' `weights_table`. The basenames of the `.pgen` and `.pvar` files in
 #' `pgen_dir` must contain the corresponding chromosome tag. For example:

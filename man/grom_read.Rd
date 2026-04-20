@@ -28,6 +28,8 @@ Stream selected model, gene, and sample combinations from an existing grom
 output on disk.
 }
 \examples{
+library(gromtools)
+
 pgen_dir <- system.file(
   "extdata",
   "synthetic_chromosomes",

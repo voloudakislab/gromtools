@@ -324,7 +324,6 @@ impute_grom <- function(
   meanimpute    = TRUE,
   is_round      = TRUE
 ) {
-  message("### impute_grom() started at: ", Sys.time())
   # Define main output directories
   out_dir <- dirname(grom_pfx)
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
@@ -404,12 +403,10 @@ impute_grom <- function(
   )
   data.table::fwrite(chr_to_pgen, file.path(meta_dir, "chr_to_pgen_map.tsv"), sep = "\t")
   message("All chromosome tags were uniquely mapped to a .pgen file.")
+  message("### impute_grom() started at: ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
 
   # Main loop
-  start <- Sys.time()
   for (i in seq_len(nrow(chr_to_pgen))) {
-    chr_start <- Sys.time()
-
     CHR <- chr_to_pgen$chromosome[i]
     pgen_file_chr <- file.path(pgen_dir, chr_to_pgen$pgen_file[i])
 
@@ -454,8 +451,6 @@ impute_grom <- function(
 
     gene_pos_chr <- flag_start_end(indices_chr)
 
-    message("Beginning calculations for chromosome-tag: ", CHR, "...")
-
     grom_axpy_engine(
       pgen_file     = pgen_file_chr,
       grom_file     = grom_file,
@@ -474,17 +469,8 @@ impute_grom <- function(
       showWarnings  = FALSE,
       rounded_mean  = is_round
     )
-
-    chr_end <- Sys.time()
-    message("Total time for chromosome-tag ", CHR, ": ", chr_end - chr_start)
   }
-  end <- Sys.time()
-
-  # Sanity check of mapping
-  check_chrom_pgen_mapping(chr_to_pgen, CHROMOSOME_TAGS, all_pgen_files, pgen_dir)
-
-  total_time <- end - start
-  message("impute_grom() completed. Total time: ", total_time)
+  message("### impute_grom() completed at: ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
 
 }
 

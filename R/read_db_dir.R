@@ -10,6 +10,8 @@
 #'   `db_dir`.
 #'
 #' @examples
+#' library(gromtools)
+#'
 #' db_directory <- system.file(
 #'   "extdata",
 #'   "synth_small_variant_weights_db",
