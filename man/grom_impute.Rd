@@ -53,6 +53,38 @@ Invisibly returns the result of the imputation pipeline after writing
 Build sparse weight triplets and generate `.grom`, `.gid`, and `.sid`
 outputs from model weights and PLINK2 genotype inputs.
 }
+\details{
+Constraints
+
+Chromosome-to-file mapping uses the `chromosomes` column in
+`weights_table`. The basenames of the `.pgen` and `.pvar` files in
+`pgen_dir` must contain the corresponding chromosome tag. For example:
+
+\preformatted{
+weights_table$chromosomes:
+  chr1
+  chr2
+  chr10
+
+Matching filenames in pgen_dir:
+  cohort.chr1.pgen
+  cohort.chr1.pvar
+  cohort.chr2.pgen
+  cohort.chr2.pvar
+  cohort.chr10.pgen
+  cohort.chr10.pvar
+}
+
+Matching is unique by chromosome tag, so `chr1` does not match `chr10`.
+Each chromosome tag must resolve to exactly one `.pgen` and one `.pvar`
+file. The `.psam` file is discovered separately and is not chromosome-tag
+matched.
+
+To confirm the resolved mapping after a run, inspect the generated files
+`meta/chr_to_pgen_map.tsv` and `meta/chr_to_pvar_map.tsv` under the output
+directory. These record which chromosome tag was matched to which genotype
+file basename.
+}
 \examples{
 pgen_dir <- system.file(
   "extdata",
@@ -75,4 +107,5 @@ grom_impute(
   grom_pfx = grom_pfx,
   pgen_dir = pgen_dir
 )
+
 }

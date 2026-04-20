@@ -109,6 +109,36 @@ means.</p></dd>
     <p>Invisibly returns the result of the imputation pipeline after writing
   output files to disk.</p>
     </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Constraints</p>
+<p>Chromosome-to-file mapping uses the `chromosomes` column in
+`weights_table`. The basenames of the `.pgen` and `.pvar` files in
+`pgen_dir` must contain the corresponding chromosome tag. For example:</p>
+<div class="sourceCode"><pre><code>
+weights_table$chromosomes:
+  chr1
+  chr2
+  chr10
+
+Matching filenames in pgen_dir:
+  cohort.chr1.pgen
+  cohort.chr1.pvar
+  cohort.chr2.pgen
+  cohort.chr2.pvar
+  cohort.chr10.pgen
+  cohort.chr10.pvar
+</code></pre></div>
+
+<p>Matching is unique by chromosome tag, so `chr1` does not match `chr10`.
+Each chromosome tag must resolve to exactly one `.pgen` and one `.pvar`
+file. The `.psam` file is discovered separately and is not chromosome-tag
+matched.</p>
+<p>To confirm the resolved mapping after a run, inspect the generated files
+`meta/chr_to_pgen_map.tsv` and `meta/chr_to_pvar_map.tsv` under the output
+directory. These record which chromosome tag was matched to which genotype
+file basename.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
@@ -133,57 +163,58 @@ means.</p></dd>
 <span class="r-in"><span>  grom_pfx <span class="op">=</span> <span class="va">grom_pfx</span>,</span></span>
 <span class="r-in"><span>  pgen_dir <span class="op">=</span> <span class="va">pgen_dir</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ### impute_grom() started at: 2026-04-19 22:56:35.262843</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> ### impute_grom() started at: 2026-04-20 00:11:48.341422</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> All chromosome tags were uniquely mapped to a .pgen file.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr1...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr1: 0.313541173934937</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr1: 0.0274949073791504</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr10...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr10: 0.125959396362305</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr10: 0.0122501850128174</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr11...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr11: 0.017672061920166</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr11: 0.00444221496582031</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr12...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr12: 0.459029912948608</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr12: 0.0233139991760254</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr13...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr13: 0.208174228668213</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr13: 0.0125443935394287</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr14...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr14: 0.0813243389129639</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr14: 0.0197229385375977</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr15...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr15: 0.294719457626343</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr15: 0.00459957122802734</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr16...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr16: 0.145748853683472</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr16: 0.00796151161193848</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr17...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr17: 0.0805618762969971</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr17: 0.00898265838623047</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr18...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr18: 0.0126066207885742</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr18: 0.00827908515930176</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr19...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr19: 0.225744962692261</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr19: 0.00672650337219238</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr2...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr2: 0.775371551513672</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr2: 0.00818085670471191</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr20...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr20: 0.0172066688537598</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr20: 0.00379514694213867</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr21...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr21: 0.0849947929382324</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr21: 0.00163769721984863</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr22...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr22: 0.128797054290771</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr22: 0.00274801254272461</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr3...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr3: 0.893653869628906</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr3: 0.0138068199157715</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr4...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr4: 2.23137545585632</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr4: 0.00572061538696289</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr5...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr5: 0.0226595401763916</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr5: 0.00436782836914062</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr6...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr6: 0.252977848052979</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr6: 0.00471258163452148</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr7...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr7: 0.0340847969055176</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr7: 0.00635600090026855</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr8...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr8: 0.225489854812622</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr8: 0.00898265838623047</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Beginning calculations for chromosome-tag: chr9...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr9: 0.0721442699432373</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Total time for chromosome-tag chr9: 0.0902652740478516</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Chromosome tags detected in weights table:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> chr1, chr10, chr11, chr12, chr13, chr14, chr15, chr16, chr17, chr18, chr19, chr2, chr20, chr21, chr22, chr3, chr4, chr5, chr6, chr7, chr8, chr9</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> All chromosome tags of column 'chromosome' were mapped successfully.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> All .pgen files from directory '/tmp/RtmpyNELxy/temp_libpath166459f8f638/gromtools/extdata/synthetic_chromosomes' were successfully mapped.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> impute_grom() completed. Total time: 6.74795746803284</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> All .pgen files from directory '/tmp/RtmpKhg47k/temp_libpath827276cad5bd/gromtools/extdata/synthetic_chromosomes' were successfully mapped.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> impute_grom() completed. Total time: 0.303741455078125</span>
+<span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
