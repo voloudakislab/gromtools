@@ -1,0 +1,29 @@
+url: https://voloudakislab.github.io/gromtools/
+llm-docs: false
+
+template:
+  bootstrap: 5
+  bootswatch: flatly
+
+repo:
+  url:
+    home: https://github.com/voloudakislab/gromtools/
+    source: https://github.com/voloudakislab/gromtools/blob/HEAD/
+    issue: https://github.com/voloudakislab/gromtools/issues/
+    user: https://github.com/
+
+navbar:
+  left:
+    - text: Home
+      href: index.html
+    - text: Getting started
+      href: articles/getting-started.html
+    - text: Reference
+      href: reference/index.html
+
+reference:
+  - title: All functions
+    contents:
+      - read_db_dir
+      - grom_impute
+      - grom_read

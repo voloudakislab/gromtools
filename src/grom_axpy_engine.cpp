@@ -13,7 +13,9 @@
 #include <omp.h>
 #endif
 
-#include <cblas.h>          // or <mkl.h> if you prefer
+extern "C" {
+#include <R_ext/BLAS.h>
+}
 #include "RPgenReader.h"    // your RPgenReader class
 
 #include <fstream>
@@ -194,12 +196,14 @@ static inline void grex_axpy_for_snp(
   if (n_chunk == 0) return;
 
   double* y = S.ensure_alloc(gene) + r0;
+  int n = static_cast<int>(n_chunk);
+  int inc = 1;
 
-  cblas_daxpy(
-    static_cast<int>(n_chunk),
-    weight,
-    chunk_src, 1,
-    y,         1
+  F77_CALL(daxpy)(
+    &n,
+    &weight,
+    chunk_src, &inc,
+    y,         &inc
   );
 }
 
@@ -290,11 +294,13 @@ static inline void process_one_snp(
                     << " threads\n";
       }
 
-      cblas_daxpy(
-        static_cast<int>(n_chunk_rows),
-        weight,
-        chunk_src, 1,
-        y,         1
+      int n = static_cast<int>(n_chunk_rows);
+      int inc = 1;
+      F77_CALL(daxpy)(
+        &n,
+        &weight,
+        chunk_src, &inc,
+        y,         &inc
       );
     }
 #else

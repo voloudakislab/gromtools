@@ -1,4 +1,4 @@
-test_that("gromtools_impute reproduces the documented example subset", {
+test_that("grom_impute reproduces the documented example subset", {
   pgen_dir <- system.file("extdata", "synthetic_chromosomes", package = "gromtools")
   db_dir <- system.file("extdata", "synth_small_variant_weights_db", package = "gromtools")
 
@@ -16,7 +16,7 @@ test_that("gromtools_impute reproduces the documented example subset", {
 
   grom_pfx <- file.path(out_dir, "synth_example")
 
-  gromtools_impute(
+  grom_impute(
     weights_table = weights_table,
     grom_pfx = grom_pfx,
     pgen_dir = pgen_dir
@@ -26,7 +26,7 @@ test_that("gromtools_impute reproduces the documented example subset", {
   expect_true(file.exists(paste0(grom_pfx, ".gid")))
   expect_true(file.exists(paste0(grom_pfx, ".sid")))
 
-  grom_mat <- gromtools_read(
+  grom_mat <- grom_read(
     grom_pfx = grom_pfx,
     models = c("AMR_subclass_IN_SST", "AMR_subclass_VLMC"),
     genes = c("ENSG00000003987", "ENSG00000053900"),

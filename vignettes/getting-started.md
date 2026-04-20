@@ -47,7 +47,7 @@ head(model_weights_table)
 
 ## Run imputation
 
-Use `gromtools_impute()` to impute genetically regulated -omics levels
+Use `grom_impute()` to impute genetically regulated -omics levels
 such as gene expression.
 
 ``` r
@@ -55,7 +55,7 @@ such as gene expression.
 # Output files get written at `tmp_grom_run/synth_example.grom/gid/sid`
 grom_pfx="tmp_grom_run/synth_example"
 
-gromtools_impute(
+grom_impute(
   grom_pfx,
   weights_table = model_weights_table,
   pgen_dir = pgen_dir
@@ -64,12 +64,12 @@ gromtools_impute(
 
 ## Read .grom file
 
-Use `gromtools_read()` to stream selected model / gene / individual
+Use `grom_read()` to stream selected model / gene / individual
 combinations from an existing `.grom` output.
 
 ``` r
 # models, genes, and samples default to NULL; NULL loads all available entries.
-grom_mat <- gromtools_read(
+grom_mat <- grom_read(
   grom_pfx = grom_pfx,
   models = c("AMR_subclass_IN_SST", "AMR_subclass_VLMC"), # defaults to NULL; selects all models
   genes = c("ENSG00000003987", "ENSG00000053900"),        # defaults to NULL; selects all genes

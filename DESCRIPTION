@@ -1,12 +1,13 @@
 Package: gromtools
 Type: Package
-Title: Computation Tools for Genetically Regulated Omics with PGEN Streaming
+Title: GROMTools: scalable individual-level GReX imputation for mega-biobank-scale cohorts
 Version: 0.1.0
 Authors@R: person("Marios", "Anyfantakis", email = "anyfantakis.marios@gmail.com", role = c("aut", "cre"))
 Description: Provides high-throughput imputation of genetically regulated omics 
     from genotype data using additive linear models that assume only linear SNP effects, 
     optimized for large-scale applications.
-License: GPL (>=3)
+URL: https://voloudakislab.github.io/gromtools/
+License: GPL-3
 Encoding: UTF-8
 Depends: 
     R (>= 4.1.0)
@@ -18,8 +19,9 @@ LinkingTo:
     Rcpp
 SystemRequirements: 
     GNU make,
-    C++17
-RoxygenNote: 7.3.0
+    C++17,
+    zlib (development headers on Linux)
+RoxygenNote: 7.3.3
 Suggests: 
     knitr,
     rmarkdown,
