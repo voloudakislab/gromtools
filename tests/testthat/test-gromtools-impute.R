@@ -57,3 +57,20 @@ test_that("grom_impute reproduces the documented example subset", {
   expect_equal(colnames(grom_mat), colnames(expected))
   expect_equal(unname(grom_mat), unname(expected), tolerance = 1e-7)
 })
+
+test_that("read_db_dir accepts a single .db file path", {
+  db_path <- system.file(
+    "extdata",
+    "synth_small_variant_weights_db",
+    "AMR_subclass_IN_SST.db",
+    package = "gromtools"
+  )
+
+  expect_true(nzchar(db_path))
+
+  weights_table <- read_db_dir(db_path)
+
+  expect_s3_class(weights_table, "data.table")
+  expect_true(nrow(weights_table) > 0L)
+  expect_equal(unique(weights_table$model_ID), "AMR_subclass_IN_SST")
+})

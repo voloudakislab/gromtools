@@ -24,16 +24,19 @@ read_db_dir <- function(db_dir, extra_cols = NULL) {
   if (!is.character(db_dir) || length(db_dir) != 1L || is.na(db_dir) || !nzchar(db_dir)) {
     stop("db_dir must be a single non-empty character string.")
   }
-  if (!dir.exists(db_dir)) {
-    stop("db_dir does not exist: ", db_dir)
-  }
 
-  db_files <- list.files(
-    db_dir,
-    pattern = "[.]db$",
-    full.names = TRUE
-  )
-  db_files <- sort(db_files)
+  if (dir.exists(db_dir)) {
+    db_files <- list.files(
+      db_dir,
+      pattern = "[.]db$",
+      full.names = TRUE
+    )
+    db_files <- sort(db_files)
+  } else if (file.exists(db_dir) && grepl("[.]db$", db_dir, ignore.case = TRUE)) {
+    db_files <- normalizePath(db_dir, winslash = "/", mustWork = TRUE)
+  } else {
+    stop("db_dir does not exist or is not a .db file: ", db_dir)
+  }
 
   if (!length(db_files)) {
     stop("No .db files found in db_dir: ", db_dir)

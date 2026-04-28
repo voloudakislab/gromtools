@@ -101,7 +101,7 @@ SQLITE_OBJECTS      = $(SQLITE_SRC_C:.c=.o)
 
 ## ---- Link against (optional) MKL + BLAS/LAPACK + zlib ----
 PKG_LIBS = \
-  $(BLAS_LIBS) $(LAPACK_LIBS) $(FLIBS) \
+  $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) \
    \
   -lz \
   $(SHLIB_OPENMP_CXXFLAGS)
