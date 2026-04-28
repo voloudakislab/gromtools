@@ -122,8 +122,8 @@ std::string normalize_chromosome(const std::string& value) {
 }
 
 std::pair<std::string, double> parse_varid_chr_pos(const std::string& varid, const std::string& db_path) {
-  const std::string::size_type first_us = varid.find('_');
-  if (first_us == std::string::npos) {
+  const std::string::size_type last_us = varid.rfind('_');
+  if (last_us == std::string::npos) {
     Rcpp::stop(
       "Cannot derive chromosome/position from weights.varID in '%s': '%s'",
       db_path.c_str(),
@@ -131,7 +131,34 @@ std::pair<std::string, double> parse_varid_chr_pos(const std::string& varid, con
     );
   }
 
-  const std::string chr = varid.substr(0, first_us);
+  const std::string::size_type alt_us = varid.rfind('_', last_us - 1);
+  if (alt_us == std::string::npos) {
+    Rcpp::stop(
+      "Cannot derive chromosome/position from weights.varID in '%s': '%s'",
+      db_path.c_str(),
+      varid.c_str()
+    );
+  }
+
+  const std::string::size_type ref_us = varid.rfind('_', alt_us - 1);
+  if (ref_us == std::string::npos) {
+    Rcpp::stop(
+      "Cannot derive chromosome/position from weights.varID in '%s': '%s'",
+      db_path.c_str(),
+      varid.c_str()
+    );
+  }
+
+  const std::string::size_type pos_us = varid.rfind('_', ref_us - 1);
+  if (pos_us == std::string::npos) {
+    Rcpp::stop(
+      "Cannot derive chromosome/position from weights.varID in '%s': '%s'",
+      db_path.c_str(),
+      varid.c_str()
+    );
+  }
+
+  const std::string chr = varid.substr(0, pos_us);
   if (!starts_with_chr(chr)) {
     Rcpp::stop(
       "weights.varID does not begin with a 'chr' prefix in '%s': '%s'",
@@ -140,16 +167,7 @@ std::pair<std::string, double> parse_varid_chr_pos(const std::string& varid, con
     );
   }
 
-  const std::string::size_type second_us = varid.find('_', first_us + 1);
-  if (second_us == std::string::npos) {
-    Rcpp::stop(
-      "Cannot derive position from weights.varID in '%s': '%s'",
-      db_path.c_str(),
-      varid.c_str()
-    );
-  }
-
-  const std::string pos_str = varid.substr(first_us + 1, second_us - first_us - 1);
+  const std::string pos_str = varid.substr(pos_us + 1, ref_us - pos_us - 1);
   char* endptr = nullptr;
   const double pos = std::strtod(pos_str.c_str(), &endptr);
   if (endptr == pos_str.c_str() || *endptr != '\0') {
