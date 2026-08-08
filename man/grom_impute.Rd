@@ -48,17 +48,14 @@ imputed.}
 \item{is_round}{Logical indicating whether mean imputation should use rounded
 means.}
 
-\item{threads}{Optional positive integer limiting the number of OpenMP worker
-threads used by the low-level imputation engine. `NULL` or non-positive
-values preserve the engine default.}
+\item{threads}{Number of OpenMP threads for GReX computation. Values less
+than or equal to zero use the engine default.}
 
-\item{pgen_threads}{Optional positive integer limiting the number of
-independent PGEN loader threads. `NULL` or non-positive values inherit the
-resolved compute-thread count.}
+\item{pgen_threads}{Number of threads for PGEN decoding. `NULL` uses the
+engine default; values less than or equal to zero inherit `threads`.}
 
-\item{write_threads}{Optional positive integer limiting the number of RAW
-output writer threads. `NULL` preserves the serial writer default; non-positive
-values inherit the resolved compute-thread count.}
+\item{write_threads}{Number of threads for RAW output writing. `NULL` uses
+serial writing; values less than or equal to zero inherit `threads`.}
 }
 \value{
 Invisibly returns the result of the imputation pipeline after writing

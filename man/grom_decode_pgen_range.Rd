@@ -43,3 +43,4 @@ parallel PGEN loader. \code{grom_decode_pgen_range_readlist()} uses the legacy
 \value{
 A numeric matrix with samples in rows and variants in columns.
 }
+\keyword{internal}
