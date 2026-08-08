@@ -14,7 +14,8 @@ grom_impute(
   exportChunk = 256L,
   meanimpute = TRUE,
   is_round = TRUE,
-  threads = NULL
+  threads = NULL,
+  pgen_threads = NULL
 )
 }
 \arguments{
@@ -49,6 +50,10 @@ means.}
 \item{threads}{Optional positive integer limiting the number of OpenMP worker
 threads used by the low-level imputation engine. `NULL` or non-positive
 values preserve the engine default.}
+
+\item{pgen_threads}{Optional positive integer limiting the number of
+independent PGEN loader threads. `NULL` or non-positive values inherit the
+resolved compute-thread count.}
 }
 \value{
 Invisibly returns the result of the imputation pipeline after writing

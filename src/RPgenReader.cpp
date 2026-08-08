@@ -13,6 +13,7 @@
 
 #include "RPgenReader.h"  // includes Rcpp
 #include <cmath>  // for std::round
+#include <limits>
 
 
 // [[Rcpp::export]]
@@ -20,16 +21,39 @@ int ping() { return 1; }
 
 using namespace std;
 
+static size_t checked_multiply_size_t(size_t lhs, size_t rhs, const char* context) {
+  if (lhs != 0 && rhs > std::numeric_limits<size_t>::max() / lhs) {
+    throw logic_error(string(context) + ": size overflow");
+  }
+  return lhs * rhs;
+}
 
 RPgenReader::RPgenReader() : _info_ptr(nullptr),
                              _allele_idx_offsetsp(nullptr),
                              _nonref_flagsp(nullptr),
-                             _state_ptr(nullptr) {
+                             _state_ptr(nullptr),
+                             _subset_include_vec(nullptr),
+                             _subset_include_interleaved_vec(nullptr),
+                             _subset_cumulative_popcounts(nullptr),
+                             _subset_size(0),
+                             _workspace_byte_ct(0),
+                             _raregeno_buf(nullptr),
+                             _difflist_sample_ids_buf(nullptr),
+                             _transpose_batch_buf(nullptr),
+                             _multivar_vmaj_geno_buf(nullptr),
+                             _multivar_vmaj_phasepresent_buf(nullptr),
+                             _multivar_vmaj_phaseinfo_buf(nullptr),
+                             _multivar_smaj_geno_batch_buf(nullptr),
+                             _multivar_smaj_phaseinfo_batch_buf(nullptr),
+                             _multivar_smaj_phasepresent_batch_buf(nullptr) {
 }
 
-void RPgenReader::Load(const string &filename, RPvar *rp, 
+void RPgenReader::Load(const string &filename, RPvar *rp,
             int raw_sample_ct,
             const vector<int> &sample_subset_1based) {
+  if (raw_sample_ct <= 0) {
+    throw logic_error("raw_sample_ct must be positive");
+  }
   if (_info_ptr) {
     Close();
   }
@@ -131,9 +155,11 @@ void RPgenReader::Load(const string &filename, RPvar *rp,
   }
   const uintptr_t dosage_main_byte_ct = plink2::DivUp(file_sample_ct, (2 * plink2::kInt32PerVec)) * plink2::kBytesPerVec;
   unsigned char* pgr_alloc;
-  if (plink2::cachealigned_malloc(pgr_alloc_main_byte_ct + (2 * plink2::kPglNypTransposeBatch + 5) * sample_subset_byte_ct + cumulative_popcounts_byte_ct + (1 + plink2::kPglNypTransposeBatch) * genovec_byte_ct + raregeno_byte_ct + difflist_sample_ids_byte_ct + multiallelic_hc_byte_ct + dosage_main_byte_ct + plink2::kPglBitTransposeBufbytes + 4 * (plink2::kPglNypTransposeBatch * plink2::kPglNypTransposeBatch / 8), &pgr_alloc)) {
+  const uintptr_t pgr_total_byte_ct = pgr_alloc_main_byte_ct + (2 * plink2::kPglNypTransposeBatch + 5) * sample_subset_byte_ct + cumulative_popcounts_byte_ct + (1 + plink2::kPglNypTransposeBatch) * genovec_byte_ct + raregeno_byte_ct + difflist_sample_ids_byte_ct + multiallelic_hc_byte_ct + dosage_main_byte_ct + plink2::kPglBitTransposeBufbytes + 4 * (plink2::kPglNypTransposeBatch * plink2::kPglNypTransposeBatch / 8);
+  if (plink2::cachealigned_malloc(pgr_total_byte_ct, &pgr_alloc)) {
     throw logic_error("Out of memory");
   }
+  _workspace_byte_ct = pgr_total_byte_ct + pgfi_alloc_cacheline_ct * plink2::kCacheline;
   plink2::PglErr reterr = plink2::PgrInit(fname, max_vrec_width, _info_ptr, _state_ptr, pgr_alloc);
   if (reterr != plink2::kPglRetSuccess) {
     if (!plink2::PgrGetFreadBuf(_state_ptr)) {
@@ -257,9 +283,130 @@ uint32_t RPgenReader::GetMaxAlleleCt() const {
   return _info_ptr->max_allele_ct;
 }
 
+size_t RPgenReader::GetEstimatedWorkspaceBytes() const {
+  return _workspace_byte_ct +
+         _meanimpute_tmp.capacity() * sizeof(double) +
+         _meanimpute_was_missing.capacity() * sizeof(unsigned char);
+}
 
 static const double kGenoRDoublePairs[32] ALIGNV16 = PAIR_TABLE16(0.0, 1.0, 2.0, NA_REAL);
 
+void RPgenReader::DecodeVariantInto(uint32_t variant_idx, double* destination, bool meanimpute, bool is_round) {
+  if (!_info_ptr) {
+    throw logic_error("pgen is closed");
+  }
+  if (!destination) {
+    throw logic_error("destination is null");
+  }
+  const uint32_t raw_variant_ct = _info_ptr->raw_variant_ct;
+  if (variant_idx >= raw_variant_ct) {
+    char errstr_buf[256];
+    snprintf(errstr_buf, 256, "variant_subset element out of range (%d; must be 1..%u)", variant_idx + 1, raw_variant_ct);
+    throw logic_error(errstr_buf);
+  }
+  uint32_t dosage_ct;
+  plink2::PglErr reterr = plink2::PgrGetD(_subset_include_vec, _subset_index, _subset_size, variant_idx, _state_ptr, _pgv.genovec, _pgv.dosage_present, _pgv.dosage_main, &dosage_ct);
+  if (reterr != plink2::kPglRetSuccess) {
+    char errstr_buf[256];
+    snprintf(errstr_buf, 256, "PgrGetD() error %d", static_cast<int>(reterr));
+    throw logic_error(errstr_buf);
+  }
+  if (!meanimpute) {
+    plink2::Dosage16ToDoubles(
+      kGenoRDoublePairs,
+      _pgv.genovec,
+      _pgv.dosage_present,
+      _pgv.dosage_main,
+      _subset_size,
+      dosage_ct,
+      destination
+    );
+    return;
+  }
+
+  plink2::ZeroTrailingNyps(_subset_size, _pgv.genovec);
+  _meanimpute_tmp.resize(_subset_size);
+  _meanimpute_was_missing.resize(_subset_size);
+  plink2::Dosage16ToDoubles(
+    kGenoRDoublePairs,
+    _pgv.genovec,
+    _pgv.dosage_present,
+    _pgv.dosage_main,
+    _subset_size,
+    dosage_ct,
+    _meanimpute_tmp.data()
+  );
+
+  for (uint32_t i = 0; i < _subset_size; ++i) {
+    _meanimpute_was_missing[i] = std::isnan(_meanimpute_tmp[i]);
+  }
+
+  if (plink2::Dosage16ToDoublesMeanimpute(
+        _pgv.genovec,
+        _pgv.dosage_present,
+        _pgv.dosage_main,
+        _subset_size,
+        dosage_ct,
+        destination)) {
+    char errstr_buf[256];
+    snprintf(errstr_buf, 256, "variant %d has only missing dosages", variant_idx + 1);
+    throw logic_error(errstr_buf);
+  }
+
+  if (is_round) {
+    for (uint32_t i = 0; i < _subset_size; ++i) {
+      if (_meanimpute_was_missing[i]) {
+        destination[i] = std::round(destination[i]);
+      }
+    }
+  }
+}
+
+void RPgenReader::ReadRangeInto(double* destination,
+                                size_t destination_size,
+                                size_t first_variant_1based,
+                                size_t variant_count,
+                                bool meanimpute,
+                                bool is_round) {
+  if (!_info_ptr) {
+    throw logic_error("pgen is closed");
+  }
+  if (variant_count == 0) {
+    if (destination_size != 0) {
+      throw logic_error("destination size for empty variant range must be 0");
+    }
+    return;
+  }
+  if (!destination) {
+    throw logic_error("destination is null");
+  }
+  if (first_variant_1based == 0) {
+    throw logic_error("first_variant_1based must be positive");
+  }
+  const size_t required_size = checked_multiply_size_t(
+    variant_count,
+    static_cast<size_t>(_subset_size),
+    "ReadRangeInto destination"
+  );
+  if (destination_size != required_size) {
+    throw logic_error("destination size is " + to_string(destination_size) +
+                      "; expected exactly " + to_string(required_size));
+  }
+  const size_t first_variant_0based = first_variant_1based - 1;
+  if (first_variant_0based >= _info_ptr->raw_variant_ct ||
+      variant_count > static_cast<size_t>(_info_ptr->raw_variant_ct) - first_variant_0based) {
+    throw logic_error("variant range out of bounds");
+  }
+
+  double* destination_iter = destination;
+  for (size_t col_idx = 0; col_idx != variant_count; ++col_idx) {
+    DecodeVariantInto(static_cast<uint32_t>(first_variant_0based + col_idx),
+                      destination_iter,
+                      meanimpute,
+                      is_round);
+    destination_iter += _subset_size;
+  }
+}
 
 void RPgenReader::ReadList(vector<double> &buf, const vector<int> & variant_subset, bool meanimpute,  bool is_round) {
   if (!_info_ptr) {
@@ -271,7 +418,12 @@ void RPgenReader::ReadList(vector<double> &buf, const vector<int> & variant_subs
     throw logic_error("Buffer capacity is " + to_string(buf.capacity()));
   }
 
-  if( buf.capacity() < variant_subset.size()*_subset_size){     
+  const size_t required_size = checked_multiply_size_t(
+    variant_subset.size(),
+    static_cast<size_t>(_subset_size),
+    "ReadList destination"
+  );
+  if( buf.capacity() < required_size){
     throw logic_error("Buffer capacity is " + to_string(buf.capacity()));
   }
 
@@ -286,69 +438,7 @@ void RPgenReader::ReadList(vector<double> &buf, const vector<int> & variant_subs
       snprintf(errstr_buf, 256, "variant_subset element out of range (%d; must be 1..%u)", variant_idx + 1, raw_variant_ct);
       throw logic_error(errstr_buf);
     }
-    uint32_t dosage_ct;
-    plink2::PglErr reterr = plink2::PgrGetD(_subset_include_vec, _subset_index, _subset_size, variant_idx, _state_ptr, _pgv.genovec, _pgv.dosage_present, _pgv.dosage_main, &dosage_ct);
-    if (reterr != plink2::kPglRetSuccess) {
-      char errstr_buf[256];
-      snprintf(errstr_buf, 256, "PgrGetD() error %d", static_cast<int>(reterr));
-      throw logic_error(errstr_buf);
-    }
-    if (!meanimpute) {
-      // no imputation, just dosage/hardcall -> double (missing stays NA)
-      plink2::Dosage16ToDoubles(
-        kGenoRDoublePairs,
-        _pgv.genovec,
-        _pgv.dosage_present,
-        _pgv.dosage_main,
-        _subset_size,
-        dosage_ct,
-        buf_iter
-      );
-    } else {
-      // we want: mean imputation, and optionally round ONLY imputed entries
-
-      // make sure trailing Nyps are clean
-      plink2::ZeroTrailingNyps(_subset_size, _pgv.genovec);
-
-      // 1) First pass: decode without imputation to see which entries are missing
-      std::vector<double> tmp(_subset_size);
-      plink2::Dosage16ToDoubles(
-        kGenoRDoublePairs,
-        _pgv.genovec,
-        _pgv.dosage_present,
-        _pgv.dosage_main,
-        _subset_size,
-        dosage_ct,
-        tmp.data()
-      );
-
-      std::vector<uint8_t> was_missing(_subset_size);
-      for (uint32_t i = 0; i < _subset_size; ++i) {
-        was_missing[i] = R_IsNA(tmp[i]);  // NA = missing before imputation
-      }
-
-      // 2) Let pgenlib do its usual mean imputation
-      if (plink2::Dosage16ToDoublesMeanimpute(
-            _pgv.genovec,
-            _pgv.dosage_present,
-            _pgv.dosage_main,
-            _subset_size,
-            dosage_ct,
-            buf_iter)) {
-        char errstr_buf[256];
-        snprintf(errstr_buf, 256, "variant %d has only missing dosages", variant_idx + 1);
-        throw logic_error(errstr_buf);
-      }
-
-      // 3) Optional: round ONLY imputed entries if is_round == true
-      if (is_round) {
-        for (uint32_t i = 0; i < _subset_size; ++i) {
-          if (was_missing[i]) {
-            buf_iter[i] = std::round(buf_iter[i]);  // 0, 1, 2 (as double)
-          }
-        }
-      }
-    }
+    DecodeVariantInto(variant_idx, buf_iter, meanimpute, is_round);
     buf_iter = &(buf_iter[_subset_size]);
   }
 }
@@ -376,6 +466,9 @@ void RPgenReader::Close() {
     _state_ptr = nullptr;
   }
   _subset_size = 0;
+  _workspace_byte_ct = 0;
+  _meanimpute_tmp.clear();
+  _meanimpute_was_missing.clear();
 }
 
 void RPgenReader::SetSampleSubsetInternal(const vector<int> & sample_subset_1based) {
@@ -384,6 +477,9 @@ void RPgenReader::SetSampleSubsetInternal(const vector<int> & sample_subset_1bas
   const uint32_t raw_sample_ctaw = raw_sample_ctv * plink2::kWordsPerVec;
   uintptr_t* sample_include = _subset_include_vec;
   plink2::ZeroWArr(raw_sample_ctaw, sample_include);
+  if (sample_subset_1based.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
+    throw logic_error("sample_subset is too large");
+  }
   const uint32_t subset_size = sample_subset_1based.size();
   if (subset_size == 0) {
     throw logic_error("Empty sample_subset is not currently permitted");

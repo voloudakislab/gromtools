@@ -25,6 +25,9 @@
 #' @param threads Optional positive integer limiting the number of OpenMP worker
 #'   threads used by the low-level imputation engine. `NULL` or non-positive
 #'   values preserve the engine default.
+#' @param pgen_threads Optional positive integer limiting the number of
+#'   independent PGEN loader threads. `NULL` or non-positive values inherit the
+#'   resolved compute-thread count.
 #'
 #' @return Invisibly returns the result of the imputation pipeline after writing
 #'   output files to disk.
@@ -94,7 +97,8 @@ grom_impute <- function(
   exportChunk   = 256L,
   meanimpute    = TRUE,
   is_round      = TRUE,
-  threads       = NULL
+  threads       = NULL,
+  pgen_threads  = NULL
 ) {
   if (!data.table::is.data.table(weights_table)) {
     if (is.data.frame(weights_table)) {
@@ -123,6 +127,7 @@ grom_impute <- function(
     exportChunk = exportChunk,
     meanimpute = meanimpute,
     is_round = is_round,
-    threads = threads
+    threads = threads,
+    pgen_threads = pgen_threads
   )
 }

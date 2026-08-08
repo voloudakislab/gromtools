@@ -16,6 +16,8 @@
 #include "pgenlib_ffi_support.h"
 #include "pgenlib_read.h"
 #include "pvar_grom.h"  // includes Rcpp
+#include <cstddef>
+#include <vector>
 
 using namespace std;
 
@@ -44,6 +46,15 @@ public:
 
   uint32_t GetMaxAlleleCt() const;
 
+  size_t GetEstimatedWorkspaceBytes() const;
+
+  void ReadRangeInto(double* destination,
+                     size_t destination_size,
+                     size_t first_variant_1based,
+                     size_t variant_count,
+                     bool meanimpute,
+                     bool is_round);
+
   void ReadList( vector<double> &buf, const vector<int> &variant_subset, bool meanimpute, bool is_round);
 
   void Close();
@@ -60,6 +71,7 @@ private:
   uint32_t* _subset_cumulative_popcounts;
   plink2::PgrSampleSubsetIndex _subset_index;
   uint32_t _subset_size;
+  size_t _workspace_byte_ct;
 
   plink2::PgenVariant _pgv;
 
@@ -74,8 +86,12 @@ private:
   uintptr_t* _multivar_smaj_geno_batch_buf;
   uintptr_t* _multivar_smaj_phaseinfo_batch_buf;
   uintptr_t* _multivar_smaj_phasepresent_batch_buf;
+  vector<double> _meanimpute_tmp;
+  vector<unsigned char> _meanimpute_was_missing;
 
   void SetSampleSubsetInternal(const vector<int> &sample_subset_1based);
+
+  void DecodeVariantInto(uint32_t variant_idx, double* destination, bool meanimpute, bool is_round);
 
   void ReadMaybeSparseHardcallsInternal(int variant_idx, int max_simple_difflist_len, uint32_t* difflist_common_geno_ptr, uint32_t* difflist_len_ptr);
 

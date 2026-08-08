@@ -5,8 +5,16 @@ ping <- function() {
     .Call(`_gromtools_ping`)
 }
 
-grom_axpy_engine <- function(indptr, indices, data, pgen_file, raw_sample_ct, snp_chunk, sample_subset, meanimpute, grom_file, CHUNK, gene_pos, exportChunk, n_total_genes, create_new, G_in = NULL, showWarnings = FALSE, rounded_mean = FALSE, threads = 0L) {
-    .Call(`_gromtools_grom_axpy_engine`, indptr, indices, data, pgen_file, raw_sample_ct, snp_chunk, sample_subset, meanimpute, grom_file, CHUNK, gene_pos, exportChunk, n_total_genes, create_new, G_in, showWarnings, rounded_mean, threads)
+grom_axpy_engine <- function(indptr, indices, data, pgen_file, raw_sample_ct, snp_chunk, sample_subset, meanimpute, grom_file, CHUNK, gene_pos, exportChunk, n_total_genes, create_new, G_in = NULL, showWarnings = FALSE, rounded_mean = FALSE, threads = 0L, pgen_threads = 0L) {
+    .Call(`_gromtools_grom_axpy_engine`, indptr, indices, data, pgen_file, raw_sample_ct, snp_chunk, sample_subset, meanimpute, grom_file, CHUNK, gene_pos, exportChunk, n_total_genes, create_new, G_in, showWarnings, rounded_mean, threads, pgen_threads)
+}
+
+grom_decode_pgen_range <- function(pgen_file, raw_sample_ct, first_variant_1based, variant_count, sample_subset, meanimpute = TRUE, rounded_mean = FALSE, pgen_threads = 1L) {
+    .Call(`_gromtools_grom_decode_pgen_range`, pgen_file, raw_sample_ct, first_variant_1based, variant_count, sample_subset, meanimpute, rounded_mean, pgen_threads)
+}
+
+grom_decode_pgen_range_readlist <- function(pgen_file, raw_sample_ct, first_variant_1based, variant_count, sample_subset, meanimpute = TRUE, rounded_mean = FALSE) {
+    .Call(`_gromtools_grom_decode_pgen_range_readlist`, pgen_file, raw_sample_ct, first_variant_1based, variant_count, sample_subset, meanimpute, rounded_mean)
 }
 
 grex_omp_info <- function() {
