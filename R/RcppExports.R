@@ -5,8 +5,8 @@ ping <- function() {
     .Call(`_gromtools_ping`)
 }
 
-grom_axpy_engine <- function(indptr, indices, data, pgen_file, raw_sample_ct, snp_chunk, sample_subset, meanimpute, grom_file, CHUNK, gene_pos, exportChunk, n_total_genes, create_new, G_in = NULL, showWarnings = FALSE, rounded_mean = FALSE) {
-    .Call(`_gromtools_grom_axpy_engine`, indptr, indices, data, pgen_file, raw_sample_ct, snp_chunk, sample_subset, meanimpute, grom_file, CHUNK, gene_pos, exportChunk, n_total_genes, create_new, G_in, showWarnings, rounded_mean)
+grom_axpy_engine <- function(indptr, indices, data, pgen_file, raw_sample_ct, snp_chunk, sample_subset, meanimpute, grom_file, CHUNK, gene_pos, exportChunk, n_total_genes, create_new, G_in = NULL, showWarnings = FALSE, rounded_mean = FALSE, threads = 0L) {
+    .Call(`_gromtools_grom_axpy_engine`, indptr, indices, data, pgen_file, raw_sample_ct, snp_chunk, sample_subset, meanimpute, grom_file, CHUNK, gene_pos, exportChunk, n_total_genes, create_new, G_in, showWarnings, rounded_mean, threads)
 }
 
 grex_omp_info <- function() {
@@ -16,4 +16,3 @@ grex_omp_info <- function() {
 sqlite_read_model_db_cpp <- function(db_path, extra_cols = NULL) {
     .Call(`_gromtools_sqlite_read_model_db_cpp`, db_path, extra_cols)
 }
-

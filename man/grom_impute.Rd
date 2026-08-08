@@ -13,7 +13,8 @@ grom_impute(
   CHUNK = 1000L,
   exportChunk = 256L,
   meanimpute = TRUE,
-  is_round = TRUE
+  is_round = TRUE,
+  threads = NULL
 )
 }
 \arguments{
@@ -44,6 +45,10 @@ imputed.}
 
 \item{is_round}{Logical indicating whether mean imputation should use rounded
 means.}
+
+\item{threads}{Optional positive integer limiting the number of OpenMP worker
+threads used by the low-level imputation engine. `NULL` or non-positive
+values preserve the engine default.}
 }
 \value{
 Invisibly returns the result of the imputation pipeline after writing

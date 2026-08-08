@@ -1,1 +1,13 @@
 ^docs$
+^\.agents$
+^\.codex$
+^github_token\.txt$
+^private$
+^temp_lib_R$
+^tmp_grom_run$
+^.*\.Rcheck$
+^.*\.tar\.gz$
+^config\.log$
+^config\.status$
+^render_vignettes\.txt$
+^tests_workflow\.txt$

@@ -22,6 +22,9 @@
 #'   imputed.
 #' @param is_round Logical indicating whether mean imputation should use rounded
 #'   means.
+#' @param threads Optional positive integer limiting the number of OpenMP worker
+#'   threads used by the low-level imputation engine. `NULL` or non-positive
+#'   values preserve the engine default.
 #'
 #' @return Invisibly returns the result of the imputation pipeline after writing
 #'   output files to disk.
@@ -90,7 +93,8 @@ grom_impute <- function(
   CHUNK         = 1000L,
   exportChunk   = 256L,
   meanimpute    = TRUE,
-  is_round      = TRUE
+  is_round      = TRUE,
+  threads       = NULL
 ) {
   if (!data.table::is.data.table(weights_table)) {
     if (is.data.frame(weights_table)) {
@@ -118,6 +122,7 @@ grom_impute <- function(
     CHUNK = CHUNK,
     exportChunk = exportChunk,
     meanimpute = meanimpute,
-    is_round = is_round
+    is_round = is_round,
+    threads = threads
   )
 }

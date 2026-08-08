@@ -21,8 +21,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // grom_axpy_engine
-Rcpp::NumericMatrix grom_axpy_engine(Rcpp::IntegerVector indptr, Rcpp::IntegerVector indices, Rcpp::NumericVector data, const std::string& pgen_file, int raw_sample_ct, size_t snp_chunk, Rcpp::IntegerVector sample_subset, bool meanimpute, const std::string& grom_file, size_t CHUNK, Rcpp::IntegerVector gene_pos, size_t exportChunk, size_t n_total_genes, bool create_new, Rcpp::Nullable<Rcpp::NumericMatrix> G_in, bool showWarnings, bool rounded_mean);
-RcppExport SEXP _gromtools_grom_axpy_engine(SEXP indptrSEXP, SEXP indicesSEXP, SEXP dataSEXP, SEXP pgen_fileSEXP, SEXP raw_sample_ctSEXP, SEXP snp_chunkSEXP, SEXP sample_subsetSEXP, SEXP meanimputeSEXP, SEXP grom_fileSEXP, SEXP CHUNKSEXP, SEXP gene_posSEXP, SEXP exportChunkSEXP, SEXP n_total_genesSEXP, SEXP create_newSEXP, SEXP G_inSEXP, SEXP showWarningsSEXP, SEXP rounded_meanSEXP) {
+Rcpp::NumericMatrix grom_axpy_engine(Rcpp::IntegerVector indptr, Rcpp::IntegerVector indices, Rcpp::NumericVector data, const std::string& pgen_file, int raw_sample_ct, size_t snp_chunk, Rcpp::IntegerVector sample_subset, bool meanimpute, const std::string& grom_file, size_t CHUNK, Rcpp::IntegerVector gene_pos, size_t exportChunk, size_t n_total_genes, bool create_new, Rcpp::Nullable<Rcpp::NumericMatrix> G_in, bool showWarnings, bool rounded_mean, int threads);
+RcppExport SEXP _gromtools_grom_axpy_engine(SEXP indptrSEXP, SEXP indicesSEXP, SEXP dataSEXP, SEXP pgen_fileSEXP, SEXP raw_sample_ctSEXP, SEXP snp_chunkSEXP, SEXP sample_subsetSEXP, SEXP meanimputeSEXP, SEXP grom_fileSEXP, SEXP CHUNKSEXP, SEXP gene_posSEXP, SEXP exportChunkSEXP, SEXP n_total_genesSEXP, SEXP create_newSEXP, SEXP G_inSEXP, SEXP showWarningsSEXP, SEXP rounded_meanSEXP, SEXP threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -43,7 +43,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericMatrix> >::type G_in(G_inSEXP);
     Rcpp::traits::input_parameter< bool >::type showWarnings(showWarningsSEXP);
     Rcpp::traits::input_parameter< bool >::type rounded_mean(rounded_meanSEXP);
-    rcpp_result_gen = Rcpp::wrap(grom_axpy_engine(indptr, indices, data, pgen_file, raw_sample_ct, snp_chunk, sample_subset, meanimpute, grom_file, CHUNK, gene_pos, exportChunk, n_total_genes, create_new, G_in, showWarnings, rounded_mean));
+    Rcpp::traits::input_parameter< int >::type threads(threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(grom_axpy_engine(indptr, indices, data, pgen_file, raw_sample_ct, snp_chunk, sample_subset, meanimpute, grom_file, CHUNK, gene_pos, exportChunk, n_total_genes, create_new, G_in, showWarnings, rounded_mean, threads));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -72,7 +73,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_gromtools_ping", (DL_FUNC) &_gromtools_ping, 0},
-    {"_gromtools_grom_axpy_engine", (DL_FUNC) &_gromtools_grom_axpy_engine, 17},
+    {"_gromtools_grom_axpy_engine", (DL_FUNC) &_gromtools_grom_axpy_engine, 18},
     {"_gromtools_grex_omp_info", (DL_FUNC) &_gromtools_grex_omp_info, 0},
     {"_gromtools_sqlite_read_model_db_cpp", (DL_FUNC) &_gromtools_sqlite_read_model_db_cpp, 2},
     {NULL, NULL, 0}

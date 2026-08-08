@@ -322,7 +322,8 @@ impute_grom <- function(
   CHUNK         = 1000L,
   exportChunk   = 256L,
   meanimpute    = TRUE,
-  is_round      = TRUE
+  is_round      = TRUE,
+  threads       = NULL
 ) {
   # Define main output directories
   out_dir <- dirname(grom_pfx)
@@ -467,7 +468,8 @@ impute_grom <- function(
       meanimpute    = meanimpute,
       create_new    = (i == 1L),
       showWarnings  = FALSE,
-      rounded_mean  = is_round
+      rounded_mean  = is_round,
+      threads       = if (is.null(threads)) 0L else as.integer(threads)[1L]
     )
   }
   message("### impute_grom() completed at: ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
