@@ -324,7 +324,8 @@ impute_grom <- function(
   meanimpute    = TRUE,
   is_round      = TRUE,
   threads       = NULL,
-  pgen_threads  = NULL
+  pgen_threads  = NULL,
+  write_threads = NULL
 ) {
   # Define main output directories
   out_dir <- dirname(grom_pfx)
@@ -471,7 +472,8 @@ impute_grom <- function(
       showWarnings  = FALSE,
       rounded_mean  = is_round,
       threads       = if (is.null(threads)) 0L else as.integer(threads)[1L],
-      pgen_threads  = if (is.null(pgen_threads)) 0L else as.integer(pgen_threads)[1L]
+      pgen_threads  = if (is.null(pgen_threads)) 0L else as.integer(pgen_threads)[1L],
+      write_threads = if (is.null(write_threads)) 1L else as.integer(write_threads)[1L]
     )
   }
   message("### impute_grom() completed at: ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"))

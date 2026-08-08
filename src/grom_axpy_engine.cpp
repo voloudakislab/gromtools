@@ -13,9 +13,28 @@
 #include <exception>
 #include <sstream>
 #include <limits>
+#include <cerrno>
+#include <climits>
+#include <string>
 //#include "h5_helpers.hpp"  // no longer used here
 #ifdef _OPENMP
 #include <omp.h>
+#endif
+
+#if defined(_WIN32)
+#define GROMTOOLS_HAS_POSIX_PWRITE 0
+#else
+#define GROMTOOLS_HAS_POSIX_PWRITE 1
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#endif
+
+#if GROMTOOLS_HAS_POSIX_PWRITE
+using RawFileOffset = off_t;
+#else
+using RawFileOffset = long long;
 #endif
 
 #include "RPgenReader.h"    // your RPgenReader class
@@ -86,17 +105,187 @@ struct RawWriter {
   std::string path;
   size_t n_rows;
   size_t n_cols;
+#if GROMTOOLS_HAS_POSIX_PWRITE
+  int fd;
+#else
   std::ofstream f;
+#endif
 
   RawWriter(const std::string& path_,
             size_t n_rows_,
             size_t n_cols_)
-    : path(path_), n_rows(n_rows_), n_cols(n_cols_),
-      f(path_, std::ios::binary | std::ios::in | std::ios::out)
+    : path(path_), n_rows(n_rows_), n_cols(n_cols_)
+#if GROMTOOLS_HAS_POSIX_PWRITE
+      , fd(-1)
+#else
+      , f(path_, std::ios::binary | std::ios::in | std::ios::out)
+#endif
   {
+#if GROMTOOLS_HAS_POSIX_PWRITE
+#ifdef O_CLOEXEC
+    fd = ::open(path.c_str(), O_RDWR | O_CLOEXEC);
+#else
+    fd = ::open(path.c_str(), O_RDWR);
+#endif
+    if (fd < 0) {
+      const int saved_errno = errno;
+      throw std::runtime_error("RawWriter: cannot open file for positioned writes: " +
+                               std::string(std::strerror(saved_errno)));
+    }
+    try {
+      validate_file_size();
+    } catch (...) {
+      ::close(fd);
+      fd = -1;
+      throw;
+    }
+#else
     if (!f) {
       throw std::runtime_error("RawWriter: cannot open file for writing");
     }
+    validate_file_size();
+#endif
+  }
+
+  RawWriter(const RawWriter&) = delete;
+  RawWriter& operator=(const RawWriter&) = delete;
+  RawWriter(RawWriter&&) = delete;
+  RawWriter& operator=(RawWriter&&) = delete;
+
+  ~RawWriter() {
+#if GROMTOOLS_HAS_POSIX_PWRITE
+    if (fd >= 0) {
+      ::close(fd);
+    }
+#endif
+  }
+
+  bool supports_parallel_positioned_writes() const {
+    return GROMTOOLS_HAS_POSIX_PWRITE != 0;
+  }
+
+  size_t expected_file_bytes() const {
+    return checked_multiply_size_t(
+      checked_multiply_size_t(n_rows, n_cols, "RawWriter expected file elements"),
+      sizeof(double),
+      "RawWriter expected file bytes"
+    );
+  }
+
+  void validate_file_size() const {
+    const size_t expected = expected_file_bytes();
+#if GROMTOOLS_HAS_POSIX_PWRITE
+    struct stat st;
+    if (::fstat(fd, &st) != 0) {
+      const int saved_errno = errno;
+      throw std::runtime_error("RawWriter: fstat failed: " +
+                               std::string(std::strerror(saved_errno)));
+    }
+    if (st.st_size < 0) {
+      throw std::runtime_error("RawWriter: negative file size");
+    }
+    if (static_cast<uintmax_t>(st.st_size) != static_cast<uintmax_t>(expected)) {
+      throw std::runtime_error("RawWriter: file size does not match expected matrix dimensions");
+    }
+#else
+    std::ifstream in(path, std::ios::binary | std::ios::ate);
+    if (!in) {
+      throw std::runtime_error("RawWriter: cannot stat file");
+    }
+    const std::streampos observed = in.tellg();
+    if (observed < 0 ||
+        static_cast<uintmax_t>(observed) != static_cast<uintmax_t>(expected)) {
+      throw std::runtime_error("RawWriter: file size does not match expected matrix dimensions");
+    }
+#endif
+  }
+
+  size_t column_offset_bytes(size_t col_idx, size_t r0 = 0) const {
+    if (col_idx >= n_cols) {
+      throw std::runtime_error("RawWriter: column index out of bounds");
+    }
+    if (r0 > n_rows) {
+      throw std::runtime_error("RawWriter: row offset out of bounds");
+    }
+    return checked_multiply_size_t(
+      checked_add_size_t(
+        checked_multiply_size_t(col_idx, n_rows, "RawWriter offset elements"),
+        r0,
+        "RawWriter offset elements"
+      ),
+      sizeof(double),
+      "RawWriter offset bytes"
+    );
+  }
+
+  size_t column_byte_count(size_t n_chunk) const {
+    return checked_multiply_size_t(n_chunk, sizeof(double), "RawWriter write bytes");
+  }
+
+  RawFileOffset checked_file_offset(size_t value, const char* context) const {
+#if GROMTOOLS_HAS_POSIX_PWRITE
+    if (value > static_cast<size_t>(std::numeric_limits<off_t>::max())) {
+      throw std::runtime_error(std::string(context) + ": offset exceeds off_t range");
+    }
+    return static_cast<off_t>(value);
+#else
+    (void)context;
+    return static_cast<off_t>(value);
+#endif
+  }
+
+  void write_at(const void* src, size_t bytes, size_t offset_bytes, const std::string& context) {
+    if (bytes == 0) return;
+    if (!src) {
+      throw std::runtime_error("RawWriter: null write buffer");
+    }
+    checked_add_size_t(offset_bytes, bytes, "RawWriter write extent");
+    const size_t expected = expected_file_bytes();
+    if (offset_bytes > expected || bytes > expected - offset_bytes) {
+      throw std::runtime_error("RawWriter: write extent exceeds output file dimensions");
+    }
+#if GROMTOOLS_HAS_POSIX_PWRITE
+    RawFileOffset offset = checked_file_offset(offset_bytes, "RawWriter write offset");
+    const char* ptr = static_cast<const char*>(src);
+    size_t remaining = bytes;
+    while (remaining > 0) {
+      size_t chunk = remaining;
+      if (chunk > static_cast<size_t>(SSIZE_MAX)) {
+        chunk = static_cast<size_t>(SSIZE_MAX);
+      }
+      const ssize_t written = ::pwrite(fd, ptr, chunk, offset);
+      if (written < 0) {
+        const int saved_errno = errno;
+        if (saved_errno == EINTR) {
+          continue;
+        }
+        throw std::runtime_error("RawWriter: pwrite failed for " + context +
+                                 ": " + std::string(std::strerror(saved_errno)));
+      }
+      if (written == 0) {
+        throw std::runtime_error("RawWriter: pwrite returned zero bytes for " + context);
+      }
+      const size_t written_size = static_cast<size_t>(written);
+      ptr += written_size;
+      remaining -= written_size;
+      offset = checked_file_offset(
+        checked_add_size_t(static_cast<size_t>(offset), written_size, "RawWriter pwrite offset"),
+        "RawWriter pwrite offset"
+      );
+    }
+#else
+    if (offset_bytes > static_cast<size_t>(std::numeric_limits<std::streamoff>::max())) {
+      throw std::runtime_error("RawWriter: offset is too large for stream");
+    }
+    if (bytes > static_cast<size_t>(std::numeric_limits<std::streamsize>::max())) {
+      throw std::runtime_error("RawWriter: write size is too large for stream");
+    }
+    f.seekp(static_cast<std::streamoff>(offset_bytes));
+    f.write(reinterpret_cast<const char*>(src), static_cast<std::streamsize>(bytes));
+    if (!f) {
+      throw std::runtime_error("RawWriter: write failed for " + context);
+    }
+#endif
   }
 
   // Write a contiguous chunk of rows [r0 .. r0 + n_chunk - 1] for column col_idx
@@ -114,30 +303,12 @@ struct RawWriter {
     }
     if (n_chunk == 0) return;
 
-    const size_t offset_elems = checked_add_size_t(
-      checked_multiply_size_t(col_idx, n_rows, "RawWriter offset elements"),
-      r0,
-      "RawWriter offset elements"
+    write_at(
+      src,
+      column_byte_count(n_chunk),
+      column_offset_bytes(col_idx, r0),
+      "column " + std::to_string(col_idx)
     );
-    const size_t offset_bytes = checked_multiply_size_t(
-      offset_elems, sizeof(double), "RawWriter offset bytes"
-    );
-    if (offset_bytes > static_cast<size_t>(std::numeric_limits<std::streamoff>::max())) {
-      throw std::runtime_error("RawWriter: offset is too large for stream");
-    }
-
-    f.seekp(static_cast<std::streamoff>(offset_bytes));
-    const size_t write_bytes = checked_multiply_size_t(
-      n_chunk, sizeof(double), "RawWriter write bytes"
-    );
-    if (write_bytes > static_cast<size_t>(std::numeric_limits<std::streamsize>::max())) {
-      throw std::runtime_error("RawWriter: write size is too large for stream");
-    }
-    f.write(reinterpret_cast<const char*>(src),
-            static_cast<std::streamsize>(write_bytes));
-    if (!f) {
-      throw std::runtime_error("RawWriter: write failed");
-    }
   }
 };
 
@@ -157,23 +328,165 @@ struct SoA {
   }
 };
 
+struct EngineTiming {
+  double reader_init = 0.0;
+  double pgen_load = 0.0;
+  double wave_prepare = 0.0;
+  double parallel_compute = 0.0;
+  double output_flush = 0.0;
+  double output_write_prepare = 0.0;
+  double output_write_positioned = 0.0;
+  size_t pgen_chunks = 0;
+  size_t decoded_variants = 0;
+  size_t decoded_dosages = 0;
+  size_t compute_waves = 0;
+  size_t operations = 0;
+  size_t max_wave_ops = 0;
+  size_t max_live_gene_columns = 0;
+  size_t decoded_buffer_bytes = 0;
+  size_t reader_workspace_bytes = 0;
+  size_t write_batches = 0;
+  size_t gene_columns_written = 0;
+  size_t output_bytes_written = 0;
+  size_t max_active_write_threads = 0;
+  size_t duplicate_write_gids = 0;
+};
+
+struct WriteJob {
+  size_t gid;
+  const double* data;
+  size_t offset_bytes;
+  size_t bytes;
+};
 
 // Flush a batch of genes to RAW BINARY, then clear them from SoA
 static inline void flush_gid_batch(SoA& S,
                                    RawWriter& writer,
-                                   std::vector<size_t>& gid_toExport) {
+                                   std::vector<size_t>& gid_toExport,
+                                   int resolved_write_threads,
+                                   EngineTiming& timing) {
   if (gid_toExport.empty()) return;
 
+  const double flush_start = wall_seconds_now();
+  const double prepare_start = wall_seconds_now();
+  std::vector<WriteJob> jobs;
+  jobs.reserve(gid_toExport.size());
+  std::unordered_set<size_t> seen;
+  seen.reserve(gid_toExport.size() * 2u);
+
   for (size_t gid : gid_toExport) {
+    if (!seen.insert(gid).second) {
+      ++timing.duplicate_write_gids;
+      continue;
+    }
     auto it = S.col.find(gid);
     if (it != S.col.end()) {
-      double* col_data = it->second.get();
-      // Export full column [0 .. n_rows-1] for this gene index
-      writer.write_rows_chunk(gid, 0, S.n_rows, col_data);
-      S.col.erase(it);
+      const double* col_data = it->second.get();
+      if (!col_data) {
+        throw std::runtime_error("flush_gid_batch: null SoA column");
+      }
+      jobs.push_back(WriteJob{
+        gid,
+        col_data,
+        writer.column_offset_bytes(gid, 0),
+        writer.column_byte_count(S.n_rows)
+      });
     }
   }
+
+  for (const WriteJob& job : jobs) {
+    checked_add_size_t(job.offset_bytes, job.bytes, "flush_gid_batch write extent");
+  }
+  timing.output_write_prepare += wall_seconds_now() - prepare_start;
+
+  if (!jobs.empty()) {
+    if (jobs.size() > static_cast<size_t>(std::numeric_limits<int>::max())) {
+      throw std::runtime_error("flush_gid_batch: too many write jobs");
+    }
+    size_t active_writers_size = std::min(
+      static_cast<size_t>(std::max(1, resolved_write_threads)),
+      jobs.size()
+    );
+    if (!writer.supports_parallel_positioned_writes() || jobs.size() <= 1) {
+      active_writers_size = 1;
+    }
+    if (active_writers_size > static_cast<size_t>(std::numeric_limits<int>::max())) {
+      throw std::runtime_error("flush_gid_batch: too many writer threads");
+    }
+    const int active_writers = static_cast<int>(active_writers_size);
+
+    std::exception_ptr first_error;
+    const double write_start = wall_seconds_now();
+#ifdef _OPENMP
+    #pragma omp parallel for schedule(static) num_threads(active_writers)
+#endif
+    for (int job_idx = 0; job_idx < static_cast<int>(jobs.size()); ++job_idx) {
+      const WriteJob& job = jobs[static_cast<size_t>(job_idx)];
+      try {
+        writer.write_at(
+          job.data,
+          job.bytes,
+          job.offset_bytes,
+          "gene column " + std::to_string(job.gid)
+        );
+      } catch (const std::exception& e) {
+        std::ostringstream msg;
+        msg << "RAW writer failed for gid " << job.gid
+            << " at offset " << job.offset_bytes
+            << " for " << job.bytes << " bytes: " << e.what();
+#ifdef _OPENMP
+        #pragma omp critical(grom_raw_writer_error)
+#endif
+        {
+          if (!first_error) {
+            first_error = std::make_exception_ptr(std::runtime_error(msg.str()));
+          }
+        }
+      } catch (...) {
+        std::ostringstream msg;
+        msg << "RAW writer failed for gid " << job.gid
+            << " at offset " << job.offset_bytes
+            << " for " << job.bytes << " bytes: unknown exception";
+#ifdef _OPENMP
+        #pragma omp critical(grom_raw_writer_error)
+#endif
+        {
+          if (!first_error) {
+            first_error = std::make_exception_ptr(std::runtime_error(msg.str()));
+          }
+        }
+      }
+    }
+    timing.output_write_positioned += wall_seconds_now() - write_start;
+
+    if (first_error) {
+      std::rethrow_exception(first_error);
+    }
+
+    size_t batch_bytes = 0;
+    for (const WriteJob& job : jobs) {
+      batch_bytes = checked_add_size_t(batch_bytes, job.bytes, "flush_gid_batch bytes written");
+      S.col.erase(job.gid);
+    }
+    timing.write_batches = checked_add_size_t(timing.write_batches, 1, "flush_gid_batch write batches");
+    timing.gene_columns_written = checked_add_size_t(
+      timing.gene_columns_written,
+      jobs.size(),
+      "flush_gid_batch gene columns written"
+    );
+    timing.output_bytes_written = checked_add_size_t(
+      timing.output_bytes_written,
+      batch_bytes,
+      "flush_gid_batch output bytes written"
+    );
+    timing.max_active_write_threads = std::max(
+      timing.max_active_write_threads,
+      active_writers_size
+    );
+  }
+
   gid_toExport.clear();
+  timing.output_flush += wall_seconds_now() - flush_start;
 }
 
 
@@ -195,23 +508,6 @@ struct WaveOp {
   double weight;
   int flag;
   double* y;
-};
-
-struct EngineTiming {
-  double reader_init = 0.0;
-  double pgen_load = 0.0;
-  double wave_prepare = 0.0;
-  double parallel_compute = 0.0;
-  double output_flush = 0.0;
-  size_t pgen_chunks = 0;
-  size_t decoded_variants = 0;
-  size_t decoded_dosages = 0;
-  size_t compute_waves = 0;
-  size_t operations = 0;
-  size_t max_wave_ops = 0;
-  size_t max_live_gene_columns = 0;
-  size_t decoded_buffer_bytes = 0;
-  size_t reader_workspace_bytes = 0;
 };
 
 static inline int available_omp_workers(int requested_threads) {
@@ -398,9 +694,11 @@ static void parallel_load_pgen_chunk(
 static inline void flush_if_needed(SoA& S,
                                    RawWriter& writer,
                                    std::vector<size_t>& gid_toExport,
-                                   size_t exportChunk) {
+                                   size_t exportChunk,
+                                   int resolved_write_threads,
+                                   EngineTiming& timing) {
   if (gid_toExport.size() >= exportChunk) {
-    flush_gid_batch(S, writer, gid_toExport);
+    flush_gid_batch(S, writer, gid_toExport, resolved_write_threads, timing);
   }
 }
 
@@ -415,6 +713,7 @@ static void process_decoded_snp_chunk(
     std::vector<size_t>& gid_toExport,
     size_t exportChunk,
     int requested_threads,
+    int resolved_write_threads,
     EngineTiming& timing)
 {
   if (chunk.n_rows == 0 || chunk.n_cols == 0) return;
@@ -491,14 +790,12 @@ static void process_decoded_snp_chunk(
     }
     timing.parallel_compute += wall_seconds_now() - compute_start;
 
-    const double flush_start = wall_seconds_now();
     for (const WaveOp& op : ops) {
       if (op.flag == 0 || op.flag == 2) {
         gid_toExport.push_back(op.gene);
-        flush_if_needed(S, writer, gid_toExport, exportChunk);
+        flush_if_needed(S, writer, gid_toExport, exportChunk, resolved_write_threads, timing);
       }
     }
-    timing.output_flush += wall_seconds_now() - flush_start;
 
     ++timing.compute_waves;
     timing.operations += ops.size();
@@ -533,7 +830,8 @@ Rcpp::NumericMatrix grom_axpy_engine(
     bool showWarnings = false,
     bool rounded_mean = false,          // after mean imputing it rounds to nearest integer when true
     int threads = 0,                    // <= 0 uses omp_get_max_threads()
-    int pgen_threads = 0                // <= 0 inherits resolved compute threads
+    int pgen_threads = 0,               // <= 0 inherits resolved compute threads
+    int write_threads = 1               // 1 serial positioned writes; <= 0 inherits compute threads
 ) {
   const int*    ip  = indptr.begin();
   const int*    idx = indices.begin();
@@ -582,6 +880,10 @@ Rcpp::NumericMatrix grom_axpy_engine(
   std::vector<std::unique_ptr<RPgenReader>> pgen_readers;
   std::vector<int> subset_std;
   const int resolved_compute_threads = available_omp_workers(threads);
+  const int requested_write_threads = write_threads;
+  const int resolved_write_threads = available_omp_workers(
+    (write_threads <= 0) ? resolved_compute_threads : write_threads
+  );
   int requested_pgen_threads = pgen_threads;
   int resolved_pgen_threads = 0;
   EngineTiming timing;
@@ -629,7 +931,7 @@ Rcpp::NumericMatrix grom_axpy_engine(
       }
       timing.reader_workspace_bytes = checked_add_size_t(
         timing.reader_workspace_bytes,
-        reader->GetEstimatedWorkspaceBytes(),
+        reader->GetEstimatedWorkspaceBytes(meanimpute),
         "grom_axpy_engine reader workspace"
       );
       pgen_readers.push_back(std::move(reader));
@@ -709,28 +1011,23 @@ Rcpp::NumericMatrix grom_axpy_engine(
     }
 
     process_decoded_snp_chunk(
-      chunk, ip, idx, w, gp, S, writer, gid_toExport, exportChunk, threads, timing
+      chunk, ip, idx, w, gp, S, writer, gid_toExport, exportChunk,
+      threads, resolved_write_threads, timing
     );
     ++timing.pgen_chunks;
   }
 
   // Flush any leftover finished genes
-  {
-    const double flush_start = wall_seconds_now();
-    flush_gid_batch(S, writer, gid_toExport);
-    timing.output_flush += wall_seconds_now() - flush_start;
-  }
+  flush_gid_batch(S, writer, gid_toExport, resolved_write_threads, timing);
 
   // Safety net: export any remaining columns still in SoA
   if (!S.col.empty()) {
-    const double flush_start = wall_seconds_now();
+    std::vector<size_t> remaining_gids;
+    remaining_gids.reserve(S.col.size());
     for (const auto& kv : S.col) {
-      size_t gid = kv.first;
-      double* col_data = kv.second.get();
-      writer.write_rows_chunk(gid, 0, S.n_rows, col_data);
+      remaining_gids.push_back(kv.first);
     }
-    S.col.clear();
-    timing.output_flush += wall_seconds_now() - flush_start;
+    flush_gid_batch(S, writer, remaining_gids, resolved_write_threads, timing);
   }
 
   Rcpp::Rcout << "grom_axpy_engine timing: "
@@ -740,6 +1037,13 @@ Rcpp::NumericMatrix grom_axpy_engine(
               << " compute_threads=" << resolved_compute_threads
               << " requested_pgen_threads=" << (using_dense ? 0 : pgen_threads)
               << " resolved_pgen_threads=" << resolved_pgen_threads
+              << " requested_write_threads=" << requested_write_threads
+              << " resolved_write_threads=" << resolved_write_threads
+              << " write_batches=" << timing.write_batches
+              << " gene_columns_written=" << timing.gene_columns_written
+              << " output_bytes_written=" << timing.output_bytes_written
+              << " max_active_write_threads=" << timing.max_active_write_threads
+              << " duplicate_write_gids=" << timing.duplicate_write_gids
               << " reader_init=" << timing.reader_init
               << "s decoded_variants=" << timing.decoded_variants
               << " decoded_dosages=" << timing.decoded_dosages
@@ -749,7 +1053,11 @@ Rcpp::NumericMatrix grom_axpy_engine(
               << " wave_prepare=" << timing.wave_prepare
               << "s parallel_compute=" << timing.parallel_compute
               << "s output_flush=" << timing.output_flush
-              << "s max_wave_ops=" << timing.max_wave_ops
+              << "s output_write_prepare=" << timing.output_write_prepare
+              << "s output_write_positioned=" << timing.output_write_positioned
+              << "s output_bytes_per_sec="
+              << ((timing.output_write_positioned > 0.0) ? (static_cast<double>(timing.output_bytes_written) / timing.output_write_positioned) : 0.0)
+              << " max_wave_ops=" << timing.max_wave_ops
               << " max_live_gene_columns=" << timing.max_live_gene_columns
               << " decoded_buffer_bytes=" << timing.decoded_buffer_bytes
               << " reader_workspace_bytes=" << timing.reader_workspace_bytes
@@ -913,6 +1221,152 @@ Rcpp::NumericMatrix grom_decode_pgen_range_readlist(
   }
   std::copy(decoded.begin(), decoded.end(), out.begin());
   return out;
+}
+
+// [[Rcpp::export]]
+Rcpp::List grom_test_readlist_buffer_contract(
+    const std::string& pgen_file,
+    int raw_sample_ct,
+    size_t first_variant_1based,
+    size_t variant_count,
+    Rcpp::IntegerVector sample_subset,
+    bool meanimpute = true,
+    bool rounded_mean = false)
+{
+  if (variant_count == 0) {
+    Rcpp::stop("variant_count must be positive for this buffer contract test.");
+  }
+
+  std::vector<int> subset_std;
+  subset_std.reserve(sample_subset.size());
+  for (int i = 0; i < sample_subset.size(); ++i) {
+    subset_std.push_back(sample_subset[i]);
+  }
+
+  RPgenReader reader;
+  reader.Load(pgen_file, nullptr, raw_sample_ct, subset_std);
+  const size_t n_inds = static_cast<size_t>(reader.GetSubsetSize());
+  const size_t required_size = checked_multiply_size_t(
+    n_inds,
+    variant_count,
+    "grom_test_readlist_buffer_contract destination"
+  );
+  if (required_size == 0) {
+    Rcpp::stop("required_size must be positive for this buffer contract test.");
+  }
+
+  std::vector<int> variants;
+  variants.reserve(variant_count);
+  for (size_t j = 0; j < variant_count; ++j) {
+    const size_t variant_1based = checked_add_size_t(
+      first_variant_1based,
+      j,
+      "grom_test_readlist_buffer_contract variant index"
+    );
+    if (variant_1based > static_cast<size_t>(std::numeric_limits<int>::max())) {
+      Rcpp::stop("variant index exceeds int range.");
+    }
+    variants.push_back(static_cast<int>(variant_1based));
+  }
+
+  std::vector<double> reference(required_size);
+  reader.ReadList(reference, variants, meanimpute, rounded_mean);
+
+  std::vector<double> exact(required_size);
+  reader.ReadList(exact, variants, meanimpute, rounded_mean);
+  const bool exact_matches = std::equal(reference.begin(), reference.end(), exact.begin());
+
+  const double sentinel = -987654321.0;
+  std::vector<double> larger(required_size + 3, sentinel);
+  reader.ReadList(larger, variants, meanimpute, rounded_mean);
+  const bool larger_prefix_matches = std::equal(reference.begin(), reference.end(), larger.begin());
+  const bool larger_tail_unchanged =
+    larger[required_size] == sentinel &&
+    larger[required_size + 1] == sentinel &&
+    larger[required_size + 2] == sentinel;
+
+  std::vector<int> empty_variants;
+  std::vector<double> empty_buffer;
+  bool empty_ok = true;
+  try {
+    reader.ReadList(empty_buffer, empty_variants, meanimpute, rounded_mean);
+  } catch (...) {
+    empty_ok = false;
+  }
+
+  std::vector<double> capacity_only;
+  capacity_only.reserve(required_size);
+  capacity_only.resize(required_size - 1);
+  bool undersized_rejected = false;
+  std::string undersized_error;
+  try {
+    reader.ReadList(capacity_only, variants, meanimpute, rounded_mean);
+  } catch (const std::exception& e) {
+    undersized_rejected = true;
+    undersized_error = e.what();
+  }
+
+  return Rcpp::List::create(
+    Rcpp::Named("required_size") = static_cast<double>(required_size),
+    Rcpp::Named("capacity_only_size") = static_cast<double>(capacity_only.size()),
+    Rcpp::Named("capacity_only_capacity") = static_cast<double>(capacity_only.capacity()),
+    Rcpp::Named("undersized_rejected") = undersized_rejected,
+    Rcpp::Named("undersized_error") = undersized_error,
+    Rcpp::Named("exact_matches") = exact_matches,
+    Rcpp::Named("larger_prefix_matches") = larger_prefix_matches,
+    Rcpp::Named("larger_tail_unchanged") = larger_tail_unchanged,
+    Rcpp::Named("empty_ok") = empty_ok
+  );
+}
+
+// [[Rcpp::export]]
+Rcpp::List grom_test_pgen_workspace_estimate(
+    const std::string& pgen_file,
+    int raw_sample_ct,
+    Rcpp::IntegerVector sample_subset,
+    size_t variant_1based,
+    bool rounded_mean = false)
+{
+  std::vector<int> subset_std;
+  subset_std.reserve(sample_subset.size());
+  for (int i = 0; i < sample_subset.size(); ++i) {
+    subset_std.push_back(sample_subset[i]);
+  }
+
+  RPgenReader reader;
+  reader.Load(pgen_file, nullptr, raw_sample_ct, subset_std);
+  const size_t n_inds = static_cast<size_t>(reader.GetSubsetSize());
+  const size_t before_false = reader.GetEstimatedWorkspaceBytes(false);
+  const size_t before_true = reader.GetEstimatedWorkspaceBytes(true);
+  const size_t expected_scratch_bytes = checked_add_size_t(
+    checked_multiply_size_t(n_inds, sizeof(double), "workspace estimate double scratch"),
+    checked_multiply_size_t(n_inds, sizeof(unsigned char), "workspace estimate missing scratch"),
+    "workspace estimate scratch"
+  );
+
+  std::vector<double> decoded(n_inds);
+  reader.ReadRangeInto(
+    decoded.data(),
+    decoded.size(),
+    variant_1based,
+    1,
+    true,
+    rounded_mean
+  );
+  const size_t after_false = reader.GetEstimatedWorkspaceBytes(false);
+  const size_t after_true = reader.GetEstimatedWorkspaceBytes(true);
+
+  return Rcpp::List::create(
+    Rcpp::Named("n_inds") = static_cast<double>(n_inds),
+    Rcpp::Named("expected_scratch_bytes") = static_cast<double>(expected_scratch_bytes),
+    Rcpp::Named("before_false") = static_cast<double>(before_false),
+    Rcpp::Named("before_true") = static_cast<double>(before_true),
+    Rcpp::Named("after_false") = static_cast<double>(after_false),
+    Rcpp::Named("after_true") = static_cast<double>(after_true),
+    Rcpp::Named("before_delta") = static_cast<double>(before_true - before_false),
+    Rcpp::Named("after_delta") = static_cast<double>(after_true - after_false),
+    Rcpp::Named("true_estimate_non_decreasing") = after_true >= before_true
+  );
 }
 
 

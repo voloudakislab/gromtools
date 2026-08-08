@@ -15,7 +15,8 @@ grom_impute(
   meanimpute = TRUE,
   is_round = TRUE,
   threads = NULL,
-  pgen_threads = NULL
+  pgen_threads = NULL,
+  write_threads = NULL
 )
 }
 \arguments{
@@ -54,6 +55,10 @@ values preserve the engine default.}
 \item{pgen_threads}{Optional positive integer limiting the number of
 independent PGEN loader threads. `NULL` or non-positive values inherit the
 resolved compute-thread count.}
+
+\item{write_threads}{Optional positive integer limiting the number of RAW
+output writer threads. `NULL` preserves the serial writer default; non-positive
+values inherit the resolved compute-thread count.}
 }
 \value{
 Invisibly returns the result of the imputation pipeline after writing

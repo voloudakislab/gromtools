@@ -46,7 +46,7 @@ public:
 
   uint32_t GetMaxAlleleCt() const;
 
-  size_t GetEstimatedWorkspaceBytes() const;
+  size_t GetEstimatedWorkspaceBytes(bool include_meanimpute) const;
 
   void ReadRangeInto(double* destination,
                      size_t destination_size,

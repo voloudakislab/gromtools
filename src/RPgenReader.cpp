@@ -28,6 +28,13 @@ static size_t checked_multiply_size_t(size_t lhs, size_t rhs, const char* contex
   return lhs * rhs;
 }
 
+static size_t checked_add_size_t(size_t lhs, size_t rhs, const char* context) {
+  if (rhs > std::numeric_limits<size_t>::max() - lhs) {
+    throw logic_error(string(context) + ": size overflow");
+  }
+  return lhs + rhs;
+}
+
 RPgenReader::RPgenReader() : _info_ptr(nullptr),
                              _allele_idx_offsetsp(nullptr),
                              _nonref_flagsp(nullptr),
@@ -283,10 +290,28 @@ uint32_t RPgenReader::GetMaxAlleleCt() const {
   return _info_ptr->max_allele_ct;
 }
 
-size_t RPgenReader::GetEstimatedWorkspaceBytes() const {
-  return _workspace_byte_ct +
-         _meanimpute_tmp.capacity() * sizeof(double) +
-         _meanimpute_was_missing.capacity() * sizeof(unsigned char);
+size_t RPgenReader::GetEstimatedWorkspaceBytes(bool include_meanimpute) const {
+  size_t total = _workspace_byte_ct;
+  size_t double_capacity = _meanimpute_tmp.capacity();
+  size_t missing_capacity = _meanimpute_was_missing.capacity();
+  if (include_meanimpute) {
+    const size_t subset_size = static_cast<size_t>(_subset_size);
+    double_capacity = std::max(double_capacity, subset_size);
+    missing_capacity = std::max(missing_capacity, subset_size);
+  }
+
+  // This is an estimate: std::vector may reserve more than the requested size.
+  total = checked_add_size_t(
+    total,
+    checked_multiply_size_t(double_capacity, sizeof(double), "meanimpute double workspace"),
+    "estimated workspace"
+  );
+  total = checked_add_size_t(
+    total,
+    checked_multiply_size_t(missing_capacity, sizeof(unsigned char), "meanimpute missing workspace"),
+    "estimated workspace"
+  );
+  return total;
 }
 
 static const double kGenoRDoublePairs[32] ALIGNV16 = PAIR_TABLE16(0.0, 1.0, 2.0, NA_REAL);
@@ -413,24 +438,23 @@ void RPgenReader::ReadList(vector<double> &buf, const vector<int> & variant_subs
     throw logic_error("pgen is closed");
   }
 
-  // Check buffer size
-  if( buf.capacity() == 0){
-    throw logic_error("Buffer capacity is " + to_string(buf.capacity()));
-  }
-
   const size_t required_size = checked_multiply_size_t(
     variant_subset.size(),
     static_cast<size_t>(_subset_size),
     "ReadList destination"
   );
-  if( buf.capacity() < required_size){
-    throw logic_error("Buffer capacity is " + to_string(buf.capacity()));
+  if (buf.size() < required_size) {
+    throw logic_error("Buffer size is " + to_string(buf.size()) +
+                      "; need at least " + to_string(required_size));
+  }
+  if (required_size == 0) {
+    return;
   }
 
   // assume that buf has the correct dimensions
   const uintptr_t vsubset_size = variant_subset.size();
   const uint32_t raw_variant_ct = _info_ptr->raw_variant_ct;
-  double* buf_iter = &buf[0];
+  double* buf_iter = buf.data();
   for (uintptr_t col_idx = 0; col_idx != vsubset_size; ++col_idx) {
     uint32_t variant_idx = variant_subset[col_idx] - 1;
     if (static_cast<uint32_t>(variant_idx) >= raw_variant_ct) {

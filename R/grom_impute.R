@@ -28,6 +28,9 @@
 #' @param pgen_threads Optional positive integer limiting the number of
 #'   independent PGEN loader threads. `NULL` or non-positive values inherit the
 #'   resolved compute-thread count.
+#' @param write_threads Optional positive integer limiting the number of RAW
+#'   output writer threads. `NULL` preserves the serial writer default; non-positive
+#'   values inherit the resolved compute-thread count.
 #'
 #' @return Invisibly returns the result of the imputation pipeline after writing
 #'   output files to disk.
@@ -98,7 +101,8 @@ grom_impute <- function(
   meanimpute    = TRUE,
   is_round      = TRUE,
   threads       = NULL,
-  pgen_threads  = NULL
+  pgen_threads  = NULL,
+  write_threads = NULL
 ) {
   if (!data.table::is.data.table(weights_table)) {
     if (is.data.frame(weights_table)) {
@@ -128,6 +132,7 @@ grom_impute <- function(
     meanimpute = meanimpute,
     is_round = is_round,
     threads = threads,
-    pgen_threads = pgen_threads
+    pgen_threads = pgen_threads,
+    write_threads = write_threads
   )
 }

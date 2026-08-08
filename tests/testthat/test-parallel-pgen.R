@@ -40,6 +40,64 @@ test_that("parallel PGEN decoder matches one-loader decoding exactly", {
   )
 })
 
+test_that("ReadList validates vector size and preserves valid-buffer behavior", {
+  pgen_dir <- system.file("extdata", "synthetic_chromosomes", package = "gromtools")
+  pgen_file <- file.path(pgen_dir, "synth.chr1.pgen")
+  psam_file <- file.path(pgen_dir, "synth.chr1.psam")
+  raw_sample_ct <- nrow(data.table::fread(psam_file))
+
+  contract <- grom_test_readlist_buffer_contract(
+    pgen_file,
+    raw_sample_ct,
+    1L,
+    7L,
+    as.integer(c(1L, 3L, 5L, 9L, 20L)),
+    TRUE,
+    TRUE
+  )
+
+  expect_true(contract$capacity_only_capacity >= contract$required_size)
+  expect_lt(contract$capacity_only_size, contract$required_size)
+  expect_true(contract$undersized_rejected)
+  expect_match(contract$undersized_error, "Buffer size")
+  expect_true(contract$exact_matches)
+  expect_true(contract$larger_prefix_matches)
+  expect_true(contract$larger_tail_unchanged)
+  expect_true(contract$empty_ok)
+
+  ref <- grom_decode_pgen_range_readlist(
+    pgen_file, raw_sample_ct, 1L, 7L,
+    as.integer(c(1L, 3L, 5L, 9L, 20L)), TRUE, TRUE
+  )
+  got <- grom_decode_pgen_range(
+    pgen_file, raw_sample_ct, 1L, 7L,
+    as.integer(c(1L, 3L, 5L, 9L, 20L)), TRUE, TRUE, 4L
+  )
+  expect_identical(as.vector(got), as.vector(ref))
+})
+
+test_that("PGEN workspace estimate accounts for optional mean-imputation scratch", {
+  pgen_dir <- system.file("extdata", "synthetic_chromosomes", package = "gromtools")
+  pgen_file <- file.path(pgen_dir, "synth.chr1.pgen")
+  psam_file <- file.path(pgen_dir, "synth.chr1.psam")
+  raw_sample_ct <- nrow(data.table::fread(psam_file))
+
+  estimate <- grom_test_pgen_workspace_estimate(
+    pgen_file,
+    raw_sample_ct,
+    as.integer(c(1L, 3L, 5L, 9L, 20L)),
+    1L,
+    TRUE
+  )
+
+  expect_equal(estimate$before_delta, estimate$expected_scratch_bytes)
+  expect_equal(estimate$after_delta, 0)
+  expect_gte(estimate$before_true, estimate$before_false + estimate$expected_scratch_bytes)
+  expect_true(estimate$true_estimate_non_decreasing)
+  expect_gte(estimate$after_false, estimate$before_false + estimate$expected_scratch_bytes)
+  expect_equal(estimate$after_true, estimate$after_false)
+})
+
 test_that("parallel PGEN decoder matches ReadList with missing genotypes", {
   plink2 <- Sys.which("plink2")
   skip_if(!nzchar(plink2), "plink2 is required to create the missing-genotype PGEN fixture")
